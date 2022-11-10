@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 import tarfile
 
 # Scoring constants
-MAX_WEIGHT = 1003
+MAX_WEIGHT = 1000
 MAX_EDGES = 10000
 N_SMALL = 100
 N_MEDIUM = 300
@@ -41,9 +41,10 @@ def write_input(G: nx.Graph, path: str, overwrite: bool=False, copy: bool=True):
         name = path.stem
         suffix = path.suffix
         i = 1
+        path = path.parent / f'{name}_{i}{suffix}'
         while os.path.exists(path):
-            path = path.parent / f'{name}_{i}{suffix}'
             i += 1
+            path = path.parent / f'{name}_{i}{suffix}'
         write_input_helper(G, path)
 
 
