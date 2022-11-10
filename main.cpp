@@ -7,7 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include <iterator>
-#include <jsoncpp/json/json.h>
+// #include <jsoncpp/json/json.h>
 #include <list>
 #include <map>
 #include <math.h>
@@ -76,6 +76,15 @@ struct Graph {
     vector<Node> nodes;                         // nodes
     vector<vector<ll>> weights_matrix;          // weights_matrix[i][j] = weight of edge from i to j
     vector<vector<pair<ll, ll>>> weights_list;  // (node, weight)
+};
+
+struct Genetic_Solver {
+	Graph G;
+	vector<ld> pick_weights;
+	Genetic_Solver(Graph G) : G(G) {
+		pick_weights = vector<ld>(G.N, 1);
+	}
+	
 };
 
 void read_graph(Graph &G) {

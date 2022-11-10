@@ -36,8 +36,6 @@ def write_input(G: nx.Graph, path: str, overwrite: bool=False, copy: bool=True):
         assert overwrite or not os.path.exists(path), \
             'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
         write_input_helper(G, path)
-    elif not os.path.exists(path):
-        write_input_helper(G, path)
     else:
         path = Path(path)
         name = path.stem
@@ -57,12 +55,26 @@ def read_input(path: str):
             return G
 
 
-def write_output(G: nx.Graph, path: str, overwrite=False):
-    assert overwrite or not os.path.exists(path), \
-        'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
+def write_output_helper(G: nx.Graph, path: str):
     if validate_output(G):
         with open(path, 'w') as fp:
             json.dump([G.nodes[v]['team'] for v in range(G.number_of_nodes())], fp)
+
+
+def write_output(G: nx.Graph, path: str, overwrite=False, copy=True):
+    if not copy:
+        assert overwrite or not os.path.exists(path), \
+            'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
+        write_output_helper(G, path)
+    else:
+        path = Path(path)
+        name = path.stem
+        suffix = path.suffix
+        i = 1
+        while os.path.exists(path):
+            path = path.parent / f'{name}_{i}{suffix}'
+            i += 1
+        write_output_helper(G, path)
 
 
 def read_output(G: nx.Graph, path: str):
