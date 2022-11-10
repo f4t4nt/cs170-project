@@ -1,3 +1,7 @@
 /.vscode
 /bin
-/vc140.pdb
+/python/__pycache__
+/*.exe
+/*.ilk
+/*.obj
+/*.pdb

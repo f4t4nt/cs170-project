@@ -7,6 +7,7 @@
 #include <iostream>
 #include <iomanip>
 #include <iterator>
+#include <jsoncpp/json/json.h>
 #include <list>
 #include <map>
 #include <math.h>
@@ -48,7 +49,41 @@ using str = string;
 #define FOBI(x, b, e, i) for(ll x = (ll) b; x < (ll) e; x += (ll) i)
 #define FORE(x, C) for(auto &x : C)
 
+str IN_FILE = "tests/small/random.in";
+
+struct DSU {
+	vector<ll> e;
+	DSU(ll N) { e = vector<ll>(N, -1); }
+	ll get(int x) { return e[x] < 0 ? x : e[x] = get(e[x]); }
+	bool same_set(ll a, ll b) { return get(a) == get(b); }
+	ll size(ll x) { return -e[get(x)]; }
+	bool unite(ll x, ll y) {
+		x = get(x), y = get(y);
+		if (x == y) return false;
+		if (e[x] > e[y]) swap(x, y);
+		e[x] += e[y]; e[y] = x;
+		return true;
+	}
+};
+
+struct Node {                                   // aka penguin
+    ll id, group;                               // penguin id, group id due to partition
+    vector<pair<ll, ll>> weights_list;          // (node, weight)
+};
+
+struct Graph {
+    ll N;                                       // number of nodes
+    vector<Node> nodes;                         // nodes
+    vector<vector<ll>> weights_matrix;          // weights_matrix[i][j] = weight of edge from i to j
+    vector<vector<pair<ll, ll>>> weights_list;  // (node, weight)
+};
+
+void read_graph(Graph &G) {
+    // TODO
+}
+
 int main() {
-    cout << "Hello, World! cpp" << endl;
+    Graph G;
+    read_graph(G);
     return 0;
 }

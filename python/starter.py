@@ -10,7 +10,7 @@ from tqdm.auto import tqdm
 import tarfile
 
 # Scoring constants
-MAX_WEIGHT = 1000
+MAX_WEIGHT = 1003
 MAX_EDGES = 10000
 N_SMALL = 100
 N_MEDIUM = 300
@@ -19,16 +19,34 @@ K_EXP = 0.5
 K_COEFFICIENT = 100
 B_EXP = 70
 
+MIN_NET_WEIGHT = MAX_WEIGHT*MAX_EDGES*0.05
+
 INPUT_SIZE_LIMIT = 1000000
 OUTPUT_SIZE_LIMIT = 10000
 
 
-def write_input(G: nx.Graph, path: str, overwrite: bool=False):
-    assert overwrite or not os.path.exists(path), \
-        'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
+def write_input_helper(G: nx.Graph, path: str):
     if validate_input(G):
         with open(path, 'w') as fp:
             json.dump(nx.node_link_data(G), fp)
+
+
+def write_input(G: nx.Graph, path: str, overwrite: bool=False, copy: bool=True):
+    if not copy:
+        assert overwrite or not os.path.exists(path), \
+            'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
+        write_input_helper(G, path)
+    elif not os.path.exists(path):
+        write_input_helper(G, path)
+    else:
+        path = Path(path)
+        name = path.stem
+        suffix = path.suffix
+        i = 1
+        while os.path.exists(path):
+            path = path.parent / f'{name}_{i}{suffix}'
+            i += 1
+        write_input_helper(G, path)
 
 
 def read_input(path: str):
@@ -74,8 +92,9 @@ def validate_input(G: nx.Graph):
         assert d['weight'] > 0, 'Edge weights must be positive'
         assert d['weight'] <= MAX_WEIGHT, f'Edge weights cannot be greater than {MAX_WEIGHT}'
     assert G.number_of_edges() <= MAX_EDGES, 'Graph has too many edges'
-    assert sum(d for u, w, d in G.edges(data='weight')) >= MAX_WEIGHT*MAX_EDGES*0.05, \
-        f'There must be at least {MAX_WEIGHT*MAX_EDGES*0.05} edge weight in the input.'
+    net_weight = sum(d for u, v, d in G.edges(data='weight'))
+    assert net_weight >= MIN_NET_WEIGHT, \
+        f'There must be at least {MIN_NET_WEIGHT} edge weight in the input, but there is only {net_weight}'
     return validate_graph(G)
 
 
