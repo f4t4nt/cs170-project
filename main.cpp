@@ -53,7 +53,7 @@ using str = string;
 #define FOBI(x, b, e, i) for(ll x = (ll) b; x < (ll) e; x += (ll) i)
 #define FORE(x, C) for(auto &x : C)
 
-str IN_FILE = "tests/small/random_1.in";
+str IN_FILE = "tests/large/random_1.in";
 ifstream fin(IN_FILE);
 
 constexpr ll MAX_WEIGHT = 1e3;
@@ -176,18 +176,18 @@ str score_to_str(ld score) {
 void write_output(Graph &G) {
 	str OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 3) + "_" + score_to_str(get_score(G)) + ".out";
 	ofstream fout(OUT_FILE);
-	fout << "[" << G.nodes[0].team + 1;
+	fout << "[" << G.nodes[0].team;
 	FOB (i, 1, sz(G.nodes)) {
-		fout << ", " << G.nodes[i].team + 1;
+		fout << ", " << G.nodes[i].team;
 	}
 	fout << "]" << endl;
 }
 
-Graph random_solve_fixed_team_count(Graph &G_in, ll team_count) {
+Graph round_table_assignment(Graph &G_in, ll team_count) {
 	Graph G = G_in;
 	G.teams = vector<Team>(team_count + 1);
 	FOR (i, G.V) {
-		G.nodes[i].team = i % sz(G.teams) + 1;
+		G.nodes[i].team = i % (sz(G.teams) - 1) + 1;
 		G.teams[G.nodes[i].team].nodes.pb(i);
 	}
 	return G;
@@ -235,7 +235,7 @@ Graph greedy_solve(Graph &G_in) {
 int main() {
     Graph G;
     read_input(G);
-	G = greedy_solve(G);
+	G = round_table_assignment(G, 10);
 	write_output(G);
 	return 0;
 }
