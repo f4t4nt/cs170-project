@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <assert.h>
 #include <cmath>
 #include <ctime>
 #include <deque>
@@ -43,6 +44,7 @@ using str = string;
 #define flip(C) reverse(C.begin(), C.end())
 #define ssort(C) sort(C.begin(), C.end())
 #define rsort(C) sort(C.begin(), C.end(), greater<>())
+#define all(C) C.begin(), C.end()
 
 #define FOR(x, e) for(ll x = 0; x < (ll) e; x++)
 #define FORR(x, e) for(ll x = (ll) e - 1; x >= 0; x--)
@@ -57,8 +59,10 @@ ifstream fin(IN_FILE);
 constexpr ll MAX_WEIGHT = 1e3;
 constexpr ll MAX_EDGES = 1e4;
 constexpr ld K_EXP = 0.5;
-constexpr ll K_COEFFICIENT = 1e2;
-constexpr ll B_EXP = 70;
+constexpr ld K_COEFFICIENT = 1e2;
+constexpr ld B_EXP = 70;
+
+constexpr ld INF = 1e18;
 
 struct DSU {
 	vector<ll> e;
@@ -81,24 +85,22 @@ struct Team;
 struct Graph;
 
 struct Node {
-    ll id;
-	Team* team;
-	vector<Link*> links;
+	ll team;
+	vector<ll> links;
 };
 
 struct Link {
 	ll weight;
-	Node* source, * target;
-	Node* get_other(Node* node) {
+	ll source, target;
+	ll get_other(ll node) {
 		if (node == source) return target;
 		elif (node == target) return source;
-		else return nullptr;
+		else return -1;
 	}
 };
 
 struct Team {
-	ll id;
-	vector<Node*> nodes;
+	vector<ll> nodes;
 };
 
 struct Graph {
@@ -113,23 +115,32 @@ struct Graph {
 };
 
 tuple<ld, ld, ld> score_separated(Graph &G) {
-	ld k = sz(G.teams);
+	ld total_nodes_processed = 0;
+	FOR (i, G.V) {
+		if (G.nodes[i].team != 0) {
+			total_nodes_processed++;
+		}
+	}
+	ld k = sz(G.teams) - 1;
 	ld b = 0;
-	FOR (i, sz(G.teams)) {
-		ld count = sz(G.teams[i].nodes);
-		ld norm = count / G.V - 1 / k;
+	assert(sz(G.teams[0].nodes) == 0);
+	FOB (i, 1, sz(G.teams)) {
+		ld norm = sz(G.teams[i].nodes) / total_nodes_processed - 1 / k;
 		b += norm * norm;
 	}
 	b = sqrt(b);
 	ld C_w = 0;
 	FOR (i, sz(G.links)) {
 		Link &link = G.links[i];
-		if (link.source->team == link.target->team) C_w += link.weight;
+		if (G.nodes[link.source].team == G.nodes[link.target].team &&
+			G.nodes[link.source].team != 0) {
+			C_w += link.weight;
+		}
 	}
 	return {C_w, K_COEFFICIENT * exp(K_EXP * k), exp(B_EXP * b)};
 }
 
-ld score(Graph &G) {
+ld get_score(Graph &G) {
 	ld C_w, K, B;
 	tie(C_w, K, B) = score_separated(G);
 	return C_w + K + B;
@@ -143,51 +154,88 @@ void read_input(Graph &G) {
 	G.multigraph = data["multigraph"];
 	assert(!G.multigraph);
 	G.nodes = vector<Node>(G.V);
-	FOR (i, G.V) {
-		G.nodes[i].id = data["nodes"][i]["id"];
-	}
 	G.E = sz(data["links"]);
 	G.links = vector<Link>(G.E);
 	G.weights = vector<vector<ll>>(G.V, vector<ll>(G.V, 0));
 	FOR (i, G.E) {
 		ll source = data["links"][i]["source"], target = data["links"][i]["target"];
 		G.links[i].weight = data["links"][i]["weight"];
-		G.links[i].source = &G.nodes[source];
-		G.links[i].target = &G.nodes[target];
-		G.nodes[source].links.pb(&G.links[i]);
-		G.nodes[target].links.pb(&G.links[i]);
-		G.weights[source][target] = G.weights[target][source] = data["links"][i]["weight"];
+		G.links[i].source = source;
+		G.links[i].target = target;
+		G.nodes[source].links.pb(i);
+		G.nodes[target].links.pb(i);
+		G.weights[source][target] = G.links[i].weight;
+		G.weights[target][source] = G.links[i].weight;
 	}
 }
 
 str score_to_str(ld score) {
-	if (score < 1000) return to_string((ll) score);
-	elif (score < 1e6) return to_string((ll) (score / 1e3)) + "k";
-	elif (score < 1e9) return to_string((ll) (score / 1e6)) + "M";
-	else return to_string((ll) (score / 1e9)) + "B";
+	return to_string((ll) round(score));
 }
 
 void write_output(Graph &G) {
-	str OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 3) + "_" + score_to_str(score(G)) + ".out";
+	str OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 3) + "_" + score_to_str(get_score(G)) + ".out";
 	ofstream fout(OUT_FILE);
-	fout << "[" << G.nodes[0].team->id;
+	fout << "[" << G.nodes[0].team + 1;
 	FOB (i, 1, sz(G.nodes)) {
-		fout << ", " << G.nodes[i].team->id;
+		fout << ", " << G.nodes[i].team + 1;
 	}
 	fout << "]" << endl;
+}
+
+Graph random_solve_fixed_team_count(Graph &G_in, ll team_count) {
+	Graph G = G_in;
+	G.teams = vector<Team>(team_count + 1);
+	FOR (i, G.V) {
+		G.nodes[i].team = i % sz(G.teams) + 1;
+		G.teams[G.nodes[i].team].nodes.pb(i);
+	}
+	return G;
+}
+
+Graph greedy_solve(Graph &G_in) {
+	Graph G = G_in;
+	vector<ll> node_order(G.V);
+	FOR (i, G.V) {
+		node_order[i] = i;
+	}
+	shuffle(all(node_order), default_random_engine());
+	G.teams = vector<Team>(2);
+	G.nodes[node_order[0]].team = 1;
+	G.teams[1].nodes.pb(node_order[0]);
+	FOB (i, 1, G.V) {
+		ll node = node_order[i];
+		ll best_team = -1;
+		ld best_score = INF;
+		FOB (team, 1, sz(G.teams)) {
+			G.nodes[node].team = team;
+			G.teams[team].nodes.pb(node);
+			ld score = get_score(G);
+			if (score < best_score) {
+				best_score = score;
+				best_team = team;
+			}
+			G.teams[team].nodes.pop_back();
+		}
+		Graph G_copy = G;
+		G_copy.teams.pb(Team());
+		G_copy.nodes[node].team = sz(G_copy.teams) - 1;
+		G_copy.teams[sz(G_copy.teams) - 1].nodes.pb(node);
+		ld score = get_score(G_copy);
+		if (score < best_score) {
+			G = G_copy;
+		} else {
+			G.nodes[node].team = best_team;
+			G.teams[best_team].nodes.pb(node);
+		}
+	}
+	return G;
 }
 
 int main() {
     Graph G;
     read_input(G);
-	G.teams = vector<Team>(10);
-	FOR (i, 10) {
-		G.teams[i].id = i + 1;
-	}
-	FOR (i, G.V) {
-		G.nodes[i].team = &G.teams[rand() % sz(G.teams)];
-		G.nodes[i].team->nodes.pb(&G.nodes[i]);
-	}
+	G = greedy_solve(G);
 	write_output(G);
-    return 0;
+	return 0;
 }
