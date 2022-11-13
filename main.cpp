@@ -53,7 +53,7 @@ using str = string;
 #define FOBI(x, b, e, i) for(ll x = (ll) b; x < (ll) e; x += (ll) i)
 #define FORE(x, C) for(auto &x : C)
 
-str IN_FILE = "tests/large/random_1.in";
+str IN_FILE = "tests/large/random_2.in";
 ifstream fin(IN_FILE);
 
 constexpr ll MAX_WEIGHT = 1e3;
@@ -78,11 +78,6 @@ struct DSU {
 		return true;
 	}
 };
-
-struct Node;
-struct Link;
-struct Team;
-struct Graph;
 
 struct Node {
 	ll team;
@@ -193,7 +188,17 @@ Graph round_table_assignment(Graph &G_in, ll team_count) {
 	return G;
 }
 
-Graph greedy_solve(Graph &G_in) {
+Graph random_assignment(Graph &G_in, ll team_count) {
+	Graph G = G_in;
+	G.teams = vector<Team>(team_count + 1);
+	FOR (i, G.V) {
+		G.nodes[i].team = rand() % (sz(G.teams) - 1) + 1;
+		G.teams[G.nodes[i].team].nodes.pb(i);
+	}
+	return G;
+}
+
+Graph greedy(Graph &G_in) {
 	Graph G = G_in;
 	vector<ll> node_order(G.V);
 	FOR (i, G.V) {
@@ -232,10 +237,52 @@ Graph greedy_solve(Graph &G_in) {
 	return G;
 }
 
+struct simulated_annealing_agent {
+	Graph G;
+	ld T;
+	void init(Graph &G_in) {
+		G = G_in;
+		T = 1;
+	}
+	void step() {
+		ll node = rand() % G.V;
+		ll current_team = G.nodes[node].team;
+		ll team = rand() % (sz(G.teams) - 1) + 1;
+		ld score = get_score(G);
+		G.nodes[node].team = team;
+		G.teams[team].nodes.pb(node);
+		G.teams[current_team].nodes.erase(find(all(G.teams[current_team].nodes), node));
+		ld new_score = get_score(G);
+		if (new_score < score) {
+			return;
+		}
+		ld p = exp((score - new_score) / T);
+		if (rand() % 1000000 < p * 1000000) {
+			return;
+		}
+		G.nodes[node].team = current_team;
+		G.teams[team].nodes.pop_back();
+		G.teams[current_team].nodes.pb(node);
+	}
+};
+
+Graph simulated_annealing(Graph &G_in) {
+	simulated_annealing_agent agent;
+	agent.init(G_in);
+	while (agent.T > 0.0001) {
+		FOR (i, 1000) {
+			agent.step();
+		}
+		agent.T *= 0.99;
+	}
+	return agent.G;
+}
+
 int main() {
     Graph G;
     read_input(G);
-	G = round_table_assignment(G, 10);
+	G = random_assignment(G, 9);
+	G = simulated_annealing(G);
 	write_output(G);
 	return 0;
 }
