@@ -135,7 +135,7 @@ def score(G: nx.Graph, separated=False):
     return C_w + K_COEFFICIENT * math.exp(K_EXP * k) + math.exp(B_EXP * b)
 
 
-def visualize(G: nx.Graph):
+def visualize(G: nx.Graph, path: str, show=False):
     output = G.nodes(data='team', default=0)
     partition = dict()
     for n, t in output:
@@ -164,6 +164,8 @@ def visualize(G: nx.Graph):
 
     plt.tight_layout()
     plt.axis("off")
+    if show:
+        plt.savefig(path)
     plt.show()
 
 
