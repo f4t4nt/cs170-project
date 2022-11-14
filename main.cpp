@@ -1,182 +1,4 @@
-#include <algorithm>
-#include <assert.h>
-#include <cmath>
-#include <ctime>
-#include <deque>
-#include <fstream>
-#include <functional>
-#include <iostream>
-#include <iomanip>
-#include <iterator>
-#include <list>
-#include <map>
-#include <math.h>
-#include <numeric>
-#include <queue>
-#include <random>
-#include <set>
-#include <sstream>
-#include <stack>
-#include <stdio.h>
-#include <string>
-#include <string.h>
-#include <tuple>
-#include <unordered_set>
-#include <utility>
-#include <vector>
-
-using namespace std;
-
-#include "json.hpp"
-using json = nlohmann::json;
-
-using ll = long long;
-using ull = unsigned long long;
-using ld = long double;
-using ch = char;
-using str = string;
-
-#define pb push_back
-#define elif else if
-#define sz(C) (ll) C.size()
-#define mp make_pair
-#define mt make_tuple
-#define flip(C) reverse(C.begin(), C.end())
-#define ssort(C) sort(C.begin(), C.end())
-#define rsort(C) sort(C.begin(), C.end(), greater<>())
-#define all(C) C.begin(), C.end()
-
-#define FOR(x, e) for(ll x = 0; x < (ll) e; x++)
-#define FORR(x, e) for(ll x = (ll) e - 1; x >= 0; x--)
-#define FOB(x, b, e) for(auto x = b; x < e; x++)
-#define FOI(x, e, i) for(ll x = 0; x < (ll) e; x += (ll) i)
-#define FOBI(x, b, e, i) for(ll x = (ll) b; x < (ll) e; x += (ll) i)
-#define FORE(x, C) for(auto &x : C)
-
-str IN_FILE = "tests/small/random_1/";
-ifstream fin(IN_FILE + "graph.in");
-
-constexpr ll MAX_WEIGHT = 1e3;
-constexpr ll MAX_EDGES = 1e4;
-constexpr ld K_EXP = 0.5;
-constexpr ld K_COEFFICIENT = 1e2;
-constexpr ld B_EXP = 70;
-
-constexpr ld INF = 1e18;
-
-struct DSU {
-	vector<ll> e;
-	DSU(ll N) { e = vector<ll>(N, -1); }
-	ll get(int x) { return e[x] < 0 ? x : e[x] = get(e[x]); }
-	bool same_set(ll a, ll b) { return get(a) == get(b); }
-	ll size(ll x) { return -e[get(x)]; }
-	bool unite(ll x, ll y) {
-		x = get(x), y = get(y);
-		if (x == y) return false;
-		if (e[x] > e[y]) swap(x, y);
-		e[x] += e[y]; e[y] = x;
-		return true;
-	}
-};
-
-struct Node {
-	ll team;
-	vector<ll> links;
-};
-
-struct Link {
-	ll weight;
-	ll source, target;
-	ll get_other(ll node) {
-		if (node == source) return target;
-		elif (node == target) return source;
-		else return -1;
-	}
-};
-
-struct Team {
-	vector<ll> nodes;
-};
-
-struct Graph {
-	// given:
-	bool directed, multigraph;
-    vector<Node> nodes;
-	vector<Link> links;
-	// calculated:
-    ll V, E;
-    vector<vector<ll>> weights;
-	vector<Team> teams;
-};
-
-tuple<ld, ld, ld> score_separated(Graph &G) {
-	ld total_nodes_processed = 0;
-	FOR (i, G.V) {
-		if (G.nodes[i].team != 0) {
-			total_nodes_processed++;
-		}
-	}
-	ld k = sz(G.teams) - 1;
-	ld b = 0;
-	assert(sz(G.teams[0].nodes) == 0);
-	FOB (i, 1, sz(G.teams)) {
-		ld norm = sz(G.teams[i].nodes) / total_nodes_processed - 1 / k;
-		b += norm * norm;
-	}
-	b = sqrt(b);
-	ld C_w = 0;
-	FOR (i, sz(G.links)) {
-		Link &link = G.links[i];
-		if (G.nodes[link.source].team == G.nodes[link.target].team &&
-			G.nodes[link.source].team != 0) {
-			C_w += link.weight;
-		}
-	}
-	return {C_w, K_COEFFICIENT * exp(K_EXP * k), exp(B_EXP * b)};
-}
-
-ld get_score(Graph &G) {
-	ld C_w, K, B;
-	tie(C_w, K, B) = score_separated(G);
-	return C_w + K + B;
-}
-
-void read_input(Graph &G) {
-	json data = json::parse(fin);
-	G.V = sz(data["nodes"]);
-	G.directed = data["directed"];
-	assert(!G.directed);
-	G.multigraph = data["multigraph"];
-	assert(!G.multigraph);
-	G.nodes = vector<Node>(G.V);
-	G.E = sz(data["links"]);
-	G.links = vector<Link>(G.E);
-	G.weights = vector<vector<ll>>(G.V, vector<ll>(G.V, 0));
-	FOR (i, G.E) {
-		ll source = data["links"][i]["source"], target = data["links"][i]["target"];
-		G.links[i].weight = data["links"][i]["weight"];
-		G.links[i].source = source;
-		G.links[i].target = target;
-		G.nodes[source].links.pb(i);
-		G.nodes[target].links.pb(i);
-		G.weights[source][target] = G.links[i].weight;
-		G.weights[target][source] = G.links[i].weight;
-	}
-}
-
-str score_to_str(ld score) {
-	return to_string((ll) round(score));
-}
-
-void write_output(Graph &G) {
-	str OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(get_score(G)) + ".out";
-	ofstream fout(OUT_FILE);
-	fout << "[" << G.nodes[0].team;
-	FOB (i, 1, sz(G.nodes)) {
-		fout << ", " << G.nodes[i].team;
-	}
-	fout << "]" << endl;
-}
+#include "header.cpp"
 
 Graph round_table_assignment(Graph &G_in, ll team_count) {
 	Graph G = G_in;
@@ -194,45 +16,6 @@ Graph random_assignment(Graph &G_in, ll team_count) {
 	FOR (i, G.V) {
 		G.nodes[i].team = rand() % (sz(G.teams) - 1) + 1;
 		G.teams[G.nodes[i].team].nodes.pb(i);
-	}
-	return G;
-}
-
-Graph greedy(Graph &G_in) {
-	Graph G = G_in;
-	vector<ll> node_order(G.V);
-	FOR (i, G.V) {
-		node_order[i] = i;
-	}
-	shuffle(all(node_order), default_random_engine());
-	G.teams = vector<Team>(2);
-	G.nodes[node_order[0]].team = 1;
-	G.teams[1].nodes.pb(node_order[0]);
-	FOB (i, 1, G.V) {
-		ll node = node_order[i];
-		ll best_team = -1;
-		ld best_score = INF;
-		FOB (team, 1, sz(G.teams)) {
-			G.nodes[node].team = team;
-			G.teams[team].nodes.pb(node);
-			ld score = get_score(G);
-			if (score < best_score) {
-				best_score = score;
-				best_team = team;
-			}
-			G.teams[team].nodes.pop_back();
-		}
-		Graph G_copy = G;
-		G_copy.teams.pb(Team());
-		G_copy.nodes[node].team = sz(G_copy.teams) - 1;
-		G_copy.teams[sz(G_copy.teams) - 1].nodes.pb(node);
-		ld score = get_score(G_copy);
-		if (score < best_score) {
-			G = G_copy;
-		} else {
-			G.nodes[node].team = best_team;
-			G.teams[best_team].nodes.pb(node);
-		}
 	}
 	return G;
 }
@@ -287,20 +70,7 @@ struct simulated_annealing_agent_weighted {
 		// FOR (i, G.V) {
 		// 	weights[i] = 1 / (weights[i] + 1);
 		// }
-		ld total_node_weight = 0;
-		FOR (i, G.V) {
-			total_node_weight += node_weights[i];
-		}
-		ld r = rand() % 1000000 / 1000000.0 * total_node_weight;
-		ll node = -1;
-		ld weight = 0;
-		FOR (i, G.V) {
-			weight += node_weights[i];
-			if (weight >= r) {
-				node = i;
-				break;
-			}
-		}
+		ll node = weighted_random(node_weights);
 		ll current_team = G.nodes[node].team;
 		vector<ld> team_weights(sz(G.teams));
 		FOR (i, G.V) {
@@ -315,20 +85,7 @@ struct simulated_annealing_agent_weighted {
 		FOB (i, 1, sz(team_weights)) {
 			team_weights[i] = 1 / (team_weights[i] + 1);
 		}
-		ld total_team_weight = 0;
-		FOR (i, sz(G.teams)) {
-			total_team_weight += team_weights[i];
-		}
-		ld r2 = rand() % 1000000 / 1000000.0 * total_team_weight;
-		ll team = -1;
-		weight = 0;
-		FOB (i, 1, sz(G.teams)) {
-			weight += team_weights[i];
-			if (weight >= r2) {
-				team = i;
-				break;
-			}
-		}
+		ll team = weighted_random(team_weights, 1);
 		ld score = get_score(G);
 		G.nodes[node].team = team;
 		G.teams[team].nodes.pb(node);
@@ -347,93 +104,54 @@ struct simulated_annealing_agent_weighted {
 	}
 };
 
-struct simulated_annealing_agent {
+struct simulated_annealing_agent_timed_weight {
 	Graph G;
 	ld T;
-	void init(Graph &G_in) {
+	ld a, b;
+	vector<ld> node_t;
+	ld get_weight(ll node) {
+		// return 1 / ((node_t[node] / a - b) * (node_t[node] / a - b) + 1);
+		// w = 1/2 * (1 + x / a)
+		return 0.5 * (1 + node_t[node] / a);
+	}
+	void init(Graph &G_in, ld a = 10000, ld b = 1) {
 		G = G_in;
 		T = 1;
+		this->a = a;
+		this->b = b;
+		node_t = vector<ld>(G.V);
 	}
 	void step() {
-		ll move = rand() % (G.V + 2);
-		if (move == G.V + 1) {
-			ld score = get_score(G);
-			Graph G_copy = G;
-			G_copy.teams.pb(Team());
-			while (true) {
-				ll largest_team = -1;
-				ll largest_team_size = -1;
-				FOB (team, 1, sz(G_copy.teams)) {
-					if (sz(G_copy.teams[team].nodes) > largest_team_size) {
-						largest_team = team;
-						largest_team_size = sz(G_copy.teams[team].nodes);
-					}
-				}
-				if (largest_team_size == sz(G_copy.teams[sz(G_copy.teams) - 1].nodes)) {
-					break;
-				}
-				ll node = G_copy.teams[largest_team].nodes[rand() % sz(G_copy.teams[largest_team].nodes)];
-				G_copy.teams[largest_team].nodes.erase(find(all(G_copy.teams[largest_team].nodes), node));
-				G_copy.teams[sz(G_copy.teams) - 1].nodes.pb(node);
-				G_copy.nodes[node].team = sz(G_copy.teams) - 1;
-			}
-			ld new_score = get_score(G_copy);
-			if (new_score < score) {
-				G = G_copy;
-			}
-			ld p = exp((score - new_score) / T);
-			if (rand() % 1000000 < p * 1000000) {
-				G = G_copy;
-			}
-		} elif (move == G.V) {
-			if (sz(G.teams) == 2) {
-				return;
-			}
-			ld score = get_score(G);
-			Graph G_copy = G;
-			ll team = rand() % (sz(G_copy.teams) - 1) + 1;
-			FORE (node, G_copy.teams[team].nodes) {
-				ll new_team = rand() % (sz(G_copy.teams) - 1) + 1;
-				while (new_team == team) {
-					new_team = rand() % (sz(G_copy.teams) - 1) + 1;
-				}
-				G_copy.teams[new_team].nodes.pb(node);
-				G_copy.nodes[node].team = new_team;
-			}
-			G_copy.teams[team].nodes.clear();
-			ld new_score = get_score(G_copy);
-			if (new_score < score) {
-				G = G_copy;
-			}
-			ld p = exp((score - new_score) / T);
-			if (rand() % 1000000 < p * 1000000) {
-				G = G_copy;
-			}
-		} else {
-			ll node = rand() % G.V;
-			ll current_team = G.nodes[node].team;
-			ll team = rand() % (sz(G.teams) - 1) + 1;
-			ld score = get_score(G);
-			G.nodes[node].team = team;
-			G.teams[team].nodes.pb(node);
-			G.teams[current_team].nodes.erase(find(all(G.teams[current_team].nodes), node));
-			ld new_score = get_score(G);
-			if (new_score < score) {
-				return;
-			}
-			ld p = exp((score - new_score) / T);
-			if (rand() % 1000000 < p * 1000000) {
-				return;
-			}
-			G.nodes[node].team = current_team;
-			G.teams[team].nodes.pop_back();
-			G.teams[current_team].nodes.pb(node);
+		vector<ld> node_weights(G.V);
+		FOR (i, G.V) {
+			node_weights[i] = get_weight(i);
+			node_t[i] += 1;
 		}
+		ll node = weighted_random(node_weights);
+		ll current_team = G.nodes[node].team;
+		ll team = rand() % (sz(G.teams) - 1) + 1;
+		ld score = get_score(G);
+		G.nodes[node].team = team;
+		G.teams[team].nodes.pb(node);
+		G.teams[current_team].nodes.erase(find(all(G.teams[current_team].nodes), node));
+		ld new_score = get_score(G);
+		if (new_score < score) {
+			node_t[node] = 0;
+			return;
+		}
+		ld p = exp((score - new_score) / T);
+		if (rand() % 1000000 < p * 1000000) {
+			node_t[node] = 0;
+			return;
+		}
+		G.nodes[node].team = current_team;
+		G.teams[team].nodes.pop_back();
+		G.teams[current_team].nodes.pb(node);
 	}
 };
 
 Graph simulated_annealing(Graph &G_in) {
-	simulated_annealing_agent agent;
+	simulated_annealing_agent_timed_weight agent;
 	agent.init(G_in);
 	while (agent.T > 0.0001) {
 		FOR (i, 1000) {
@@ -444,12 +162,71 @@ Graph simulated_annealing(Graph &G_in) {
 	return agent.G;
 }
 
+struct genetic_algorithm_controller {
+	vector<Graph> population;
+	ll generations_left;
+	ld mutation_rate;
+	void init(Graph &G_in, ll team_count, ll population_size, ll generations, ld mutation_rate = 0.1) {
+		generations_left = generations;
+		this->mutation_rate = mutation_rate;
+		population = vector<Graph>(population_size);
+		FOR (i, population_size) {
+			population[i] = random_assignment(G_in, team_count);
+		}
+	}
+	void step() {
+		vector<Graph> new_population;
+		FOR (i, sz(population)) {
+			ll a = rand() % sz(population);
+			ll b = rand() % sz(population);
+			Graph G_a = population[a];
+			Graph G_b = population[b];
+			Graph G_c = crossover(G_a, G_b);
+			G_c = mutate(G_c, mutation_rate);
+			new_population.pb(G_c);
+		}
+		sort(all(new_population), [](Graph &a, Graph &b) {
+			return get_score(a) > get_score(b);
+		});
+		population = vector<Graph>(new_population.begin(), new_population.begin() + sz(population));
+		generations_left--;
+	}
+	Graph crossover(Graph &G_a, Graph &G_b) {
+		Graph G_c = G_a;
+		FOR (i, G_c.V) {
+			if (rand() % 2) {
+				G_c.nodes[i].team = G_b.nodes[i].team;
+			}
+		}
+		return G_c;
+	}
+	Graph mutate(Graph &G, ld rate) {
+		Graph G_m = G;
+		FOR (i, G_m.V) {
+			if (rand() % 1000000 < rate * 1000000) {
+				G_m.nodes[i].team = rand() % (sz(G_m.teams) - 1) + 1;
+			}
+		}
+		return G_m;
+	}
+};
+
+Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 100, ll generations = 1000, ld mutation_rate = 0.1) {
+	genetic_algorithm_controller controller;
+	controller.init(G_in, team_count, population_size, generations, mutation_rate);
+	while (controller.generations_left > 0) {
+		controller.step();
+	}
+	return controller.population[0];
+}
+
 int main() {
-	srand(time(NULL));
+	// srand(time(NULL));
+	set_io("tests/small/random_1/");
+
     Graph G;
     read_input(G);
-	G = random_assignment(G, 11);
-	G = simulated_annealing(G);
+	G = genetic_algorithm(G, 9);
 	write_output(G);
 	return 0;
 }
