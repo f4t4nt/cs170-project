@@ -274,35 +274,61 @@ struct simulated_annealing_agent_weighted {
 		T = 1;
 	}
 	void step() {
-		vector<ld> weights(G.V);
+		vector<ld> node_weights(G.V);
 		FOR (i, G.V) {
 			ll team = G.nodes[i].team;
 			for (ll link : G.nodes[i].links) {
 				ll neighbor = G.links[link].source + G.links[link].target - i;
 				if (G.nodes[neighbor].team == team) {
-					weights[i] += G.links[link].weight;
+					node_weights[i] += G.links[link].weight;
 				}
 			}
 		}
 		// FOR (i, G.V) {
 		// 	weights[i] = 1 / (weights[i] + 1);
 		// }
-		ld total_weight = 0;
+		ld total_node_weight = 0;
 		FOR (i, G.V) {
-			total_weight += weights[i];
+			total_node_weight += node_weights[i];
 		}
-		ld r = rand() % 1000000 / 1000000.0 * total_weight;
+		ld r = rand() % 1000000 / 1000000.0 * total_node_weight;
 		ll node = -1;
 		ld weight = 0;
 		FOR (i, G.V) {
-			weight += weights[i];
+			weight += node_weights[i];
 			if (weight >= r) {
 				node = i;
 				break;
 			}
 		}
 		ll current_team = G.nodes[node].team;
-		ll team = rand() % (sz(G.teams) - 1) + 1;
+		vector<ld> team_weights(sz(G.teams));
+		FOR (i, G.V) {
+			ll team = G.nodes[i].team;
+			for (ll link : G.nodes[i].links) {
+				ll neighbor = G.links[link].source + G.links[link].target - i;
+				if (G.nodes[neighbor].team == team) {
+					team_weights[team] += G.links[link].weight;
+				}
+			}
+		}
+		FOB (i, 1, sz(team_weights)) {
+			team_weights[i] = 1 / (team_weights[i] + 1);
+		}
+		ld total_team_weight = 0;
+		FOR (i, sz(G.teams)) {
+			total_team_weight += team_weights[i];
+		}
+		ld r2 = rand() % 1000000 / 1000000.0 * total_team_weight;
+		ll team = -1;
+		weight = 0;
+		FOB (i, 1, sz(G.teams)) {
+			weight += team_weights[i];
+			if (weight >= r2) {
+				team = i;
+				break;
+			}
+		}
 		ld score = get_score(G);
 		G.nodes[node].team = team;
 		G.teams[team].nodes.pb(node);
@@ -407,7 +433,7 @@ struct simulated_annealing_agent {
 };
 
 Graph simulated_annealing(Graph &G_in) {
-	simulated_annealing_agent_weighted agent;
+	simulated_annealing_agent agent;
 	agent.init(G_in);
 	while (agent.T > 0.0001) {
 		FOR (i, 1000) {
@@ -419,6 +445,7 @@ Graph simulated_annealing(Graph &G_in) {
 }
 
 int main() {
+	srand(time(NULL));
     Graph G;
     read_input(G);
 	G = random_assignment(G, 11);
