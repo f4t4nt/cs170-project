@@ -38,6 +38,8 @@ def write_input(G: nx.Graph, path: str, overwrite: bool=False, copy: bool=True):
         path = os.path.join(path, 'graph.in')
         assert overwrite or not os.path.exists(path), \
             'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
+        if os.path.exists(path):
+            print(f'WARNING: Overwriting {path}')
         write_input_helper(G, path)
     else:
         path = path.rstrip('/') + '_1/'
@@ -68,6 +70,8 @@ def write_output(G: nx.Graph, path: str, overwrite=False, copy=True):
     if not copy:
         assert overwrite or not os.path.exists(path), \
             'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
+        if os.path.exists(path):
+            print(f'WARNING: Overwriting {path}')
         write_output_helper(G, path)
     else:
         path = Path(path)
@@ -108,8 +112,10 @@ def validate_input(G: nx.Graph, ignore_net_weight=False):
         assert d['weight'] <= MAX_WEIGHT, f'Edge weights cannot be greater than {MAX_WEIGHT}'
     assert G.number_of_edges() <= MAX_EDGES, 'Graph has too many edges'
     net_weight = sum(d for u, v, d in G.edges(data='weight'))
-    assert ignore_net_weight or net_weight >= MIN_NET_WEIGHT, \
-        f'There must be at least {MIN_NET_WEIGHT} edge weight in the input, but there is only {net_weight}'
+    # assert ignore_net_weight or net_weight >= MIN_NET_WEIGHT, \
+    #     f'There must be at least {MIN_NET_WEIGHT} edge weight in the input, but there is only {net_weight}'
+    if not ignore_net_weight and net_weight < MIN_NET_WEIGHT:
+        print(f'WARNING: There is only {net_weight} edge weight in the input, but there should be at least {MIN_NET_WEIGHT}')
     return validate_graph(G)
 
 
@@ -169,23 +175,29 @@ def visualize(G: nx.Graph, path: str, show=False):
     plt.show()
 
 
-def run(solver, in_file: str, out_file: str, overwrite: bool=False):
+def run(solver, in_file: str, out_file: str, overwrite: bool=False, copy: bool=False):
     instance = read_input(in_file)
     output = solver(instance)
     if output:
         instance = output
-    write_output(instance, out_file, overwrite)
+    write_output(instance, out_file, overwrite, copy)
     print(f"{str(in_file)}: cost", score(instance))
 
 
 def run_all(solver, in_dir, out_dir, overwrite: bool=False):
-    for file in tqdm([x for x in os.listdir(in_dir) if x.endswith('.in')]):
-        run(solver, str(Path(in_dir) / file), str(Path(out_dir) / f"{file[:-len('.in')]}.out"), overwrite)
+    for root, dirs, files in os.walk(in_dir):
+        for file in files:
+            if file == 'graph.in':
+                in_file = os.path.join(root, file)
+                out_file = os.path.join(out_dir, os.path.basename(os.path.dirname(in_file)) + '.out')
+                run(solver, in_file, out_file, overwrite)
 
 
 def tar(out_dir, overwrite=False):
-    path = f'{os.path.basename(out_dir)}.tar'
+    path = f'../submission.tar'
     assert overwrite or not os.path.exists(path), \
         'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
+    if os.path.exists(path):
+        print(f'Overwriting {path}')
     with tarfile.open(path, 'w') as fp:
         fp.add(out_dir)
