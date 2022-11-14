@@ -50,11 +50,11 @@ def write_input(G: nx.Graph, path: str, overwrite: bool=False, copy: bool=True):
         write_input_helper(G, path)
 
 
-def read_input(path: str):
+def read_input(path: str, ignore_net_weight=False):
     assert os.path.getsize(path) < INPUT_SIZE_LIMIT, 'This input file is too large'
     with open(path) as fp:
         G = nx.node_link_graph(json.load(fp))
-        if validate_input(G):
+        if validate_input(G, ignore_net_weight):
             return G
 
 
@@ -97,7 +97,7 @@ def validate_graph(G: nx.Graph):
     return True
 
 
-def validate_input(G: nx.Graph):
+def validate_input(G: nx.Graph, ignore_net_weight=False):
     for n, d in G.nodes(data=True):
         assert not d, 'Nodes cannot have data'
     for u, v, d in G.edges(data=True):
@@ -108,7 +108,7 @@ def validate_input(G: nx.Graph):
         assert d['weight'] <= MAX_WEIGHT, f'Edge weights cannot be greater than {MAX_WEIGHT}'
     assert G.number_of_edges() <= MAX_EDGES, 'Graph has too many edges'
     net_weight = sum(d for u, v, d in G.edges(data='weight'))
-    assert net_weight >= MIN_NET_WEIGHT, \
+    assert ignore_net_weight or net_weight >= MIN_NET_WEIGHT, \
         f'There must be at least {MIN_NET_WEIGHT} edge weight in the input, but there is only {net_weight}'
     return validate_graph(G)
 

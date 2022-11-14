@@ -1,4 +1,4 @@
-#include "header.cpp"
+#include "extras.cpp"
 
 Graph round_table_assignment(Graph &G_in, ll team_count) {
 	Graph G = G_in;
@@ -111,7 +111,6 @@ struct simulated_annealing_agent_timed_weight {
 	vector<ld> node_t;
 	ld get_weight(ll node) {
 		// return 1 / ((node_t[node] / a - b) * (node_t[node] / a - b) + 1);
-		// w = 1/2 * (1 + x / a)
 		return 0.5 * (1 + node_t[node] / a);
 	}
 	void init(Graph &G_in, ld a = 10000, ld b = 1) {
@@ -151,7 +150,7 @@ struct simulated_annealing_agent_timed_weight {
 };
 
 Graph simulated_annealing(Graph &G_in) {
-	simulated_annealing_agent_timed_weight agent;
+	simulated_annealing_agent_basic agent;
 	agent.init(G_in);
 	while (agent.T > 0.0001) {
 		FOR (i, 1000) {
@@ -162,7 +161,7 @@ Graph simulated_annealing(Graph &G_in) {
 	return agent.G;
 }
 
-struct genetic_algorithm_controller {
+struct genetic_algorithm_controller_basic {
 	vector<Graph> population;
 	ll generations_left;
 	ld mutation_rate;
@@ -212,7 +211,7 @@ struct genetic_algorithm_controller {
 };
 
 Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 100, ll generations = 1000, ld mutation_rate = 0.1) {
-	genetic_algorithm_controller controller;
+	genetic_algorithm_controller_basic controller;
 	controller.init(G_in, team_count, population_size, generations, mutation_rate);
 	while (controller.generations_left > 0) {
 		controller.step();
@@ -221,12 +220,13 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 100, ll
 }
 
 int main() {
-	// srand(time(NULL));
-	set_io("tests/small/random_1/");
+	srand(time(NULL));
+	set_io("tests/examples/hw11_6c/");
 
     Graph G;
     read_input(G);
-	G = genetic_algorithm(G, 9);
+	G = random_assignment(G, 2);
+	G = simulated_annealing(G);
 	write_output(G);
 	return 0;
 }

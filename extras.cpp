@@ -43,7 +43,7 @@ Graph greedy(Graph &G_in) { // inserts all nodes into one team
 	return G;
 }
 
-struct simulated_annealing_agent_team_adjustment { // generally better to focus _basic on optimal team count
+struct simulated_annealing_agent_team_adjustment { // generally better to focus basic on optimal team count
 	Graph G;
 	ld T;
 	void init(Graph &G_in) {

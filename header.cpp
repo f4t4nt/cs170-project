@@ -201,4 +201,5 @@ ll weighted_random(vector<ld> &weights, ll range = 0) {
 		}
 	}
 	assert(false);
+	return -1;
 }
