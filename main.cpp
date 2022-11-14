@@ -266,6 +266,61 @@ struct simulated_annealing_agent_basic {
 	}
 };
 
+struct simulated_annealing_agent_weighted {
+	Graph G;
+	ld T;
+	void init(Graph &G_in) {
+		G = G_in;
+		T = 1;
+	}
+	void step() {
+		vector<ld> weights(G.V);
+		FOR (i, G.V) {
+			ll team = G.nodes[i].team;
+			for (ll link : G.nodes[i].links) {
+				ll neighbor = G.links[link].source + G.links[link].target - i;
+				if (G.nodes[neighbor].team == team) {
+					weights[i] += G.links[link].weight;
+				}
+			}
+		}
+		// FOR (i, G.V) {
+		// 	weights[i] = 1 / (weights[i] + 1);
+		// }
+		ld total_weight = 0;
+		FOR (i, G.V) {
+			total_weight += weights[i];
+		}
+		ld r = rand() % 1000000 / 1000000.0 * total_weight;
+		ll node = -1;
+		ld weight = 0;
+		FOR (i, G.V) {
+			weight += weights[i];
+			if (weight >= r) {
+				node = i;
+				break;
+			}
+		}
+		ll current_team = G.nodes[node].team;
+		ll team = rand() % (sz(G.teams) - 1) + 1;
+		ld score = get_score(G);
+		G.nodes[node].team = team;
+		G.teams[team].nodes.pb(node);
+		G.teams[current_team].nodes.erase(find(all(G.teams[current_team].nodes), node));
+		ld new_score = get_score(G);
+		if (new_score < score) {
+			return;
+		}
+		ld p = exp((score - new_score) / T);
+		if (rand() % 1000000 < p * 1000000) {
+			return;
+		}
+		G.nodes[node].team = current_team;
+		G.teams[team].nodes.pop_back();
+		G.teams[current_team].nodes.pb(node);
+	}
+};
+
 struct simulated_annealing_agent {
 	Graph G;
 	ld T;
@@ -352,7 +407,7 @@ struct simulated_annealing_agent {
 };
 
 Graph simulated_annealing(Graph &G_in) {
-	simulated_annealing_agent_basic agent;
+	simulated_annealing_agent_weighted agent;
 	agent.init(G_in);
 	while (agent.T > 0.0001) {
 		FOR (i, 1000) {
