@@ -53,8 +53,8 @@ using str = string;
 #define FOBI(x, b, e, i) for(ll x = (ll) b; x < (ll) e; x += (ll) i)
 #define FORE(x, C) for(auto &x : C)
 
-str IN_FILE = "tests/large/random_2.in";
-ifstream fin(IN_FILE);
+str IN_FILE = "tests/large/random_1/";
+ifstream fin(IN_FILE + "graph.in");
 
 constexpr ll MAX_WEIGHT = 1e3;
 constexpr ll MAX_EDGES = 1e4;
@@ -169,7 +169,7 @@ str score_to_str(ld score) {
 }
 
 void write_output(Graph &G) {
-	str OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 3) + "_" + score_to_str(get_score(G)) + ".out";
+	str OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(get_score(G)) + ".out";
 	ofstream fout(OUT_FILE);
 	fout << "[" << G.nodes[0].team;
 	FOB (i, 1, sz(G.nodes)) {

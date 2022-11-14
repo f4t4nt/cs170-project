@@ -33,18 +33,20 @@ def write_input_helper(G: nx.Graph, path: str):
 
 def write_input(G: nx.Graph, path: str, overwrite: bool=False, copy: bool=True):
     if not copy:
+        if not os.path.exists(path):
+            os.makedirs(path)
+        path = os.path.join(path, 'graph.in')
         assert overwrite or not os.path.exists(path), \
             'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
         write_input_helper(G, path)
     else:
-        path = Path(path)
-        name = path.stem
-        suffix = path.suffix
+        path = path.rstrip('/') + '_1/'
         i = 1
-        path = path.parent / f'{name}_{i}{suffix}'
         while os.path.exists(path):
+            path = path.rstrip(f'_{i}/') + f'_{i+1}/'
             i += 1
-            path = path.parent / f'{name}_{i}{suffix}'
+        os.makedirs(path)
+        path = os.path.join(path, 'graph.in')
         write_input_helper(G, path)
 
 
