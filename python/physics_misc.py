@@ -29,23 +29,23 @@ def get_acceleration():
     node_accel = np.zeros((node_count, dim))
     for i in range(node_count):
         for j in range(node_count):
-            if edge_weights[i][j] > 0:
-                node_accel[i] += (edge_weights[i][j] - np.linalg.norm(node_pos[i] - node_pos[j])) * (node_pos[i] - node_pos[j]) / np.linalg.norm(node_pos[i] - node_pos[j]) * edge_weights[i][j]
+            if i != j:
+                node_accel[i] += (edge_weights[i][j] - np.linalg.norm(node_pos[i] - node_pos[j])) * (node_pos[i] - node_pos[j]) / np.linalg.norm(node_pos[i] - node_pos[j]) * (100 + edge_weights[i][j])
     for i in range(node_count):
         node_accel[i] += -node_pos[i] / np.linalg.norm(node_pos[i])
-    for i in range(node_count):
-        closest_node = -1
-        closest_dist = 1e10
-        for j in range(node_count):
-            if i != j and np.linalg.norm(node_pos[i] - node_pos[j]) < closest_dist:
-                closest_node = j
-                closest_dist = np.linalg.norm(node_pos[i] - node_pos[j])
-        node_accel[i] += (node_pos[closest_node] - node_pos[i]) / np.linalg.norm(node_pos[closest_node] - node_pos[i])
-    for i in range(node_count):
-        for j in range(node_count):
-            if edge_weights[i][j] == 0 and i != j:
-                node_accel[i] += (node_pos[j] - node_pos[i]) / np.linalg.norm(node_pos[j] - node_pos[i]) * 2
-                # node_accel[i] += (node_pos[j] - node_pos[i]) / np.linalg.norm(node_pos[j] - node_pos[i])
+    # for i in range(node_count):
+    #     closest_node = -1
+    #     closest_dist = 1e10
+    #     for j in range(node_count):
+    #         if i != j and np.linalg.norm(node_pos[i] - node_pos[j]) < closest_dist:
+    #             closest_node = j
+    #             closest_dist = np.linalg.norm(node_pos[i] - node_pos[j])
+    #     node_accel[i] += (node_pos[closest_node] - node_pos[i]) / np.linalg.norm(node_pos[closest_node] - node_pos[i])
+    # for i in range(node_count):
+    #     for j in range(node_count):
+    #         if edge_weights[i][j] == 0 and i != j:
+    #             node_accel[i] += (node_pos[j] - node_pos[i]) / np.linalg.norm(node_pos[j] - node_pos[i]) * 2
+    #             # node_accel[i] += (node_pos[j] - node_pos[i]) / np.linalg.norm(node_pos[j] - node_pos[i])
     return node_accel
 
 total_steps = 1e4
