@@ -1,7 +1,3 @@
-  //////////////////////////////////////////
- // helper data structures and functions //
-//////////////////////////////////////////
-
 #include <algorithm>
 #include <assert.h>
 #include <cmath>
@@ -105,11 +101,11 @@ struct Team {
 struct Graph {
 	// given:
 	bool directed, multigraph;
-    vector<Node> nodes;
+	vector<Node> nodes;
 	vector<Link> links;
 	// calculated:
-    ll V, E;
-    vector<vector<ll>> weights;
+	ll V, E;
+	vector<vector<ll>> weights;
 	vector<Team> teams;
 };
 
