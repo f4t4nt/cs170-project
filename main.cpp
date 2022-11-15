@@ -311,11 +311,12 @@ Graph physics(Graph &G_in, ll total_steps, ld dt = 0.001, ll dim = 2, ld k = 1) 
 
 int main() {
 	// srand(time(NULL));
-	set_io("tests/examples/hw11_6c/");
+	set_io("tests/examples/project_skeleton/");
 
 	Graph G;
 	read_input(G);
-	G  = physics(G, 1000, 0.001, 2, 1);
+	G = random_assignment(G, 4);
+	G = simulated_annealing(G);
 	write_output(G);
 	return 0;
 }

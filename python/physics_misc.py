@@ -1,79 +1,44 @@
 import numpy as np
 import vpython as vp
+import matplotlib.pyplot as plt
+from starter import *
 
-history = []
+def visualize_physics_2d(node_pos, edge_weights):
+    node_count = node_pos.shape[0]
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.set_aspect('equal')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    for v in range(node_count):
+        for u in range(v):
+            if edge_weights[v, u] > 0:
+                # transparancy = 0.5 * edge_weights[v, u] / np.max(edge_weights)
+                ax.plot([node_pos[v, 0], node_pos[u, 0]], [node_pos[v, 1], node_pos[u, 1]], color='black', alpha=0.5)
+    for v in range(node_count):
+        ax.plot(node_pos[v, 0], node_pos[v, 1], 'ro', color='red', zorder=10)
+    ax.set_xlim(np.min(node_pos[:, 0]) - 1, np.max(node_pos[:, 0]) + 1)
+    ax.set_ylim(np.min(node_pos[:, 1]) - 1, np.max(node_pos[:, 1]) + 1)
+    plt.show()
 
-node_count = 16
-edge_weights = [[0 for i in range(node_count)] for j in range(node_count)]
-for i in range(node_count):
-    edge_weights.append([])
-    for j in range(node_count):
-        edge_weights[i].append(0)
-        if i % 4 != 3 and j == i + 1:
-            edge_weights[i][j] = 100
-            edge_weights[j][i] = 100
-        if i < 12 and j == i + 4:
-            edge_weights[i][j] = 100
-            edge_weights[j][i] = 100
-edge_weights = np.array(edge_weights)
-
-dt = 1e-3
-dim = 2
-node_pos = np.random.rand(node_count, dim) * 2 - 1
-# node_vel = np.zeros((node_count, dim))
-node_vel = np.random.rand(node_count, dim) * 2 - 1
-vel_decay = 0.99
-history.append(node_pos)
-
-def get_acceleration():
-    node_accel = np.zeros((node_count, dim))
-    for i in range(node_count):
-        for j in range(node_count):
-            if i != j:
-                node_accel[i] += (edge_weights[i][j] - np.linalg.norm(node_pos[i] - node_pos[j])) * (node_pos[i] - node_pos[j]) / np.linalg.norm(node_pos[i] - node_pos[j]) * (100 + edge_weights[i][j])
-    for i in range(node_count):
-        node_accel[i] += -node_pos[i] / np.linalg.norm(node_pos[i])
-    # for i in range(node_count):
-    #     closest_node = -1
-    #     closest_dist = 1e10
-    #     for j in range(node_count):
-    #         if i != j and np.linalg.norm(node_pos[i] - node_pos[j]) < closest_dist:
-    #             closest_node = j
-    #             closest_dist = np.linalg.norm(node_pos[i] - node_pos[j])
-    #     node_accel[i] += (node_pos[closest_node] - node_pos[i]) / np.linalg.norm(node_pos[closest_node] - node_pos[i])
-    # for i in range(node_count):
-    #     for j in range(node_count):
-    #         if edge_weights[i][j] == 0 and i != j:
-    #             node_accel[i] += (node_pos[j] - node_pos[i]) / np.linalg.norm(node_pos[j] - node_pos[i]) * 2
-    #             # node_accel[i] += (node_pos[j] - node_pos[i]) / np.linalg.norm(node_pos[j] - node_pos[i])
-    return node_accel
-
-total_steps = 1e4
-
-for step in range(int(total_steps)):
-    node_pos = node_pos + node_vel * dt
-    node_accel = get_acceleration()
-    node_vel = node_vel + node_accel * dt
-    node_vel = node_vel * vel_decay
-    history.append(node_pos)
+def visualize_physics(history, node_count, edge_weights):
+    def vector_to_3d(vector):
+        rv = []
+        if len(vector) == 1:
+            rv = np.append(vector, [0, 0])
+        elif len(vector) == 2:
+            rv =  np.append(vector, 0)
+        else:
+            rv = vector[:3]
+        return vp.vector(*rv)
     
-def vector_to_3d(vector):
-    rv = []
-    if len(vector) == 1:
-        rv = np.append(vector, [0, 0])
-    elif len(vector) == 2:
-        rv =  np.append(vector, 0)
-    else:
-        rv = vector[:3]
-    return vp.vector(*rv)
-
-def visualize(history):
     vp.scene.width = 1600
     vp.scene.height = 900
     vp.scene.background = vp.color.white
     vp.scene.center = vector_to_3d(np.mean(history[0], axis=0))
     vp.scene.range = 1.5 * np.max(np.linalg.norm(history[0], axis=1))
     vp.scene.autoscale = False
+    
     nodes = []
     for i in range(node_count):
         nodes.append(vp.sphere(pos=vector_to_3d(history[0][i]), radius=0.5, color=vp.color.red))
@@ -92,4 +57,124 @@ def visualize(history):
                     edges[(i, j)].pos = vector_to_3d(history[step][i])
                     edges[(i, j)].axis = vector_to_3d(history[step][j] - history[step][i])
 
-visualize(history)
+def physics_solve(G: nx.Graph, team_count: int):
+    node_count = G.number_of_nodes()
+    edge_weights = np.zeros((node_count, node_count))
+    for v in range(node_count):
+        for u in range(v):
+            if G.has_edge(v, u):
+                edge_weights[v, u] = edge_weights[u, v] = G[v][u]['weight']
+    
+    history = []
+
+    dt = 1e-3
+    dim = 3
+    node_pos = np.random.rand(node_count, dim) * 2 - 1
+    node_vel = np.zeros((node_count, dim))
+    node_vel = np.random.rand(node_count, dim) * 2 - 1
+    vel_decay = 0.99
+    history.append(node_pos)
+
+    def get_acceleration():
+        node_accel = np.zeros((node_count, dim))
+        dist = np.linalg.norm(node_pos[:, np.newaxis] - node_pos, axis=2)
+        dist[dist == 0] = 1
+        node_accel = np.sum((edge_weights[:, :, np.newaxis] - dist[:, :, np.newaxis]) * (node_pos[:, np.newaxis] - node_pos) / dist[:, :, np.newaxis] * 100, axis=1)
+        node_accel += -node_pos / np.linalg.norm(node_pos, axis=1)[:, np.newaxis]
+        return node_accel
+
+    total_steps = 1e4
+
+    for step in range(int(total_steps)):
+        node_pos = node_pos + node_vel * dt
+        node_accel = get_acceleration()
+        node_vel = node_vel + node_accel * dt
+        node_vel = node_vel * vel_decay
+        history.append(node_pos)
+        
+    # visualize_physics(history, node_count, edge_weights)
+    visualize_physics_2d(history[-1], edge_weights)
+
+    class DSU:
+        # dsu with functions to:
+        # find team
+        # merge teams
+        # find total number of teams
+        # find size of team
+        def __init__(self, n):
+            self.parent = list(range(n))
+            self.size = [1] * n
+            self.team_count = n
+        
+        def find(self, v):
+            if v == self.parent[v]:
+                return v
+            self.parent[v] = self.find(self.parent[v])
+            return self.parent[v]
+    
+        def union(self, v, u):
+            v = self.find(v)
+            u = self.find(u)
+            if v == u:
+                return
+            if self.size[v] < self.size[u]:
+                v, u = u, v
+            self.parent[u] = v
+            self.size[v] += self.size[u]
+            self.team_count -= 1
+        
+        def get_team_count(self):
+            return self.team_count
+    
+        def get_team_size(self, v):
+            return self.size[self.find(v)]
+        
+    def modified_kruskal_1():
+        edges = []
+        for i in range(node_count):
+            for j in range(i):
+                edges.append((np.linalg.norm(node_pos[i] - node_pos[j]), i, j))
+        edges.sort()
+        dsu = DSU(node_count)
+        for edge in edges:
+            dsu.union(edge[1], edge[2])
+            if dsu.get_count() == team_count:
+                return [dsu.find(i) for i in range(node_count)]
+            
+    def modified_kruskal_2():
+        edges = []
+        for i in range(node_count):
+            for j in range(i):
+                edges.append((np.linalg.norm(node_pos[i] - node_pos[j]), i, j))
+        edges.sort()
+        dsu = DSU(node_count)
+        while dsu.get_team_count() > team_count:
+            smallest_merge = 1e9
+            best_edge = None
+            for edge in edges:
+                if dsu.find(edge[1]) != dsu.find(edge[2]):
+                    if smallest_merge > dsu.get_team_size(edge[1]) + dsu.get_team_size(edge[2]):
+                        smallest_merge = dsu.get_team_size(edge[1]) + dsu.get_team_size(edge[2])
+                        best_edge = edge
+            dsu.union(best_edge[1], best_edge[2])
+        return [dsu.find(i) for i in range(node_count)]
+
+    teams = modified_kruskal_2()
+
+    def shrink_teams():
+        team_dict = dict()
+        for i in range(node_count):
+            if teams[i] not in team_dict:
+                team_dict[teams[i]] = len(team_dict) + 1
+        return [team_dict[teams[i]] for i in range(node_count)]
+
+    teams = shrink_teams()
+    print(teams)
+    
+    def assign_teams():
+        for i in range(node_count):
+            G.nodes[i]['team'] = teams[i]
+    
+    assign_teams()
+    
+    return G

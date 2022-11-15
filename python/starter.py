@@ -32,7 +32,7 @@ def write_input_helper(G: nx.Graph, path: str):
 
 
 def write_input(G: nx.Graph, path: str, overwrite: bool=False, copy: bool=True):
-    if not copy:
+    if not copy or overwrite:
         if not os.path.exists(path):
             os.makedirs(path)
         path = os.path.join(path, 'graph.in')
@@ -67,7 +67,7 @@ def write_output_helper(G: nx.Graph, path: str):
 
 
 def write_output(G: nx.Graph, path: str, overwrite=False, copy=True):
-    if not copy:
+    if not copy or overwrite:
         assert overwrite or not os.path.exists(path), \
             'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
         if os.path.exists(path):
@@ -112,8 +112,6 @@ def validate_input(G: nx.Graph, ignore_net_weight=False):
         assert d['weight'] <= MAX_WEIGHT, f'Edge weights cannot be greater than {MAX_WEIGHT}'
     assert G.number_of_edges() <= MAX_EDGES, 'Graph has too many edges'
     net_weight = sum(d for u, v, d in G.edges(data='weight'))
-    # assert ignore_net_weight or net_weight >= MIN_NET_WEIGHT, \
-    #     f'There must be at least {MIN_NET_WEIGHT} edge weight in the input, but there is only {net_weight}'
     if not ignore_net_weight and net_weight < MIN_NET_WEIGHT:
         print(f'WARNING: There is only {net_weight} edge weight in the input, but there should be at least {MIN_NET_WEIGHT}')
     return validate_graph(G)
@@ -141,7 +139,7 @@ def score(G: nx.Graph, separated=False):
     return C_w + K_COEFFICIENT * math.exp(K_EXP * k) + math.exp(B_EXP * b)
 
 
-def visualize(G: nx.Graph, path: str, show=False):
+def visualize(G: nx.Graph, path=None):
     output = G.nodes(data='team', default=0)
     partition = dict()
     for n, t in output:
@@ -170,7 +168,7 @@ def visualize(G: nx.Graph, path: str, show=False):
 
     plt.tight_layout()
     plt.axis("off")
-    if show:
+    if path is not None:
         plt.savefig(path)
     plt.show()
 
