@@ -129,8 +129,58 @@ struct simulated_annealing_agent_timed_weight {
 	}
 };
 
+struct simulated_annealing_agent_swaps {
+	Graph G;
+	ld T;
+	void init(Graph &G_in) {
+		G = G_in;
+		T = 1;
+	}
+	void step() {
+		ll num_swap_nodes = T * 20 + 1;
+		set<ll> swap_nodes;
+		while (sz(swap_nodes) < num_swap_nodes) {
+			swap_nodes.insert(rand() % G.V);
+		}
+		vector<ll> swap_nodes_vec(all(swap_nodes));
+		vector<ll> curr_teams;
+		for (ll node : swap_nodes_vec) {
+			curr_teams.pb(G.nodes[node].team);
+		}
+		vector<ll> new_teams(num_swap_nodes);
+		FOR (i, num_swap_nodes) {
+			new_teams[i] = rand() % (sz(G.teams) - 1) + 1;
+		}
+		// vector<ll> new_teams = curr_teams;
+		// shuffle(all(new_teams), default_random_engine(rand()));
+		ld score = get_score(G);
+		FOR (i, sz(swap_nodes_vec)) {
+			ll node = swap_nodes_vec[i];
+			ll team = new_teams[i];
+			G.nodes[node].team = team;
+			G.teams[team].nodes.pb(node);
+			G.teams[curr_teams[i]].nodes.erase(find(all(G.teams[curr_teams[i]].nodes), node));
+		}
+		ld new_score = get_score(G);
+		if (new_score < score) {
+			return;
+		}
+		ld p = exp((score - new_score) / T);
+		if (rand() % 1000000 < p * 1000000) {
+			return;
+		}
+		FOR (i, sz(swap_nodes_vec)) {
+			ll node = swap_nodes_vec[i];
+			ll team = curr_teams[i];
+			G.nodes[node].team = team;
+			G.teams[team].nodes.pb(node);
+			G.teams[new_teams[i]].nodes.erase(find(all(G.teams[new_teams[i]].nodes), node));
+		}
+	}
+};
+
 Graph simulated_annealing(Graph &G_in) {
-	simulated_annealing_agent_basic agent;
+	simulated_annealing_agent_team_adjustment agent;
 	agent.init(G_in);
 	while (agent.T > 0.0001) {
 		FOR (i, 1000) {
@@ -201,12 +251,12 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 100, ll
 
 int main() {
 	// srand(time(NULL));
-	set_io("tests/small/random_1/", "sim_anneal");
+	set_io("tests/large/scatter_1/", "sim_anneal");
 
 	Graph G;
 	read_input(G);
-	read_teams(G, "260494");
-	// G = random_assignment(G, 5);
+	// read_teams(G, "65232_sim_anneal");
+	G = random_assignment(G, 10);
 	G = simulated_annealing(G);
 	write_output(G);
 	return 0;

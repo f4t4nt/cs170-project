@@ -1,5 +1,0 @@
-Note 1:
-We will only ever need a maximum of 30 teams (very upper bound, most likely 25 would do):
-WolframAlpha query: minimize 100e^(x/2)+1000*x*(floor(1000/x) choose 2), x>0
-Can alternatively be visualized on Desmos
----
