@@ -62,6 +62,7 @@ constexpr ld B_EXP = 70;
 constexpr ld INF = 1e18;
 
 str IN_FILE;
+str RUN_TYPE;
 ifstream fin;
 
 struct DSU {
@@ -141,8 +142,9 @@ ld get_score(Graph &G) {
 	return C_w + K + B;
 }
 
-void set_io(str file) {
+void set_io(str file, str run_type = "") {
 	IN_FILE = file;
+	RUN_TYPE = run_type;
 	fin = ifstream(IN_FILE + "graph.in");
 }
 
@@ -169,12 +171,34 @@ void read_input(Graph &G) {
 	}
 }
 
+void read_teams(Graph &G, str file) {
+	str TEAM_FILE = IN_FILE + file + ".out";
+	ifstream fin(TEAM_FILE);
+	str text;
+	getline(fin, text);
+	json data = json::parse(text);
+	ll num_teams = 0;
+	FOR (i, sz(data)) {
+		num_teams = max(num_teams, (ll) data[i]);
+	}
+	G.teams = vector<Team>(num_teams + 1);
+	FOR (i, sz(data)) {
+		G.nodes[i].team = data[i];
+		G.teams[data[i]].nodes.pb(i);
+	}
+}
+
 str score_to_str(ld score) {
 	return to_string((ll) round(score));
 }
 
 void write_output(Graph &G) {
-	str OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(get_score(G)) + ".out";
+	str OUT_FILE;
+	if (RUN_TYPE == "") {
+		OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(get_score(G)) + ".out";
+	} else {
+		OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(get_score(G)) + "_" + RUN_TYPE + ".out";
+	}	
 	ofstream fout(OUT_FILE);
 	fout << "[" << G.nodes[0].team;
 	FOB (i, 1, sz(G.nodes)) {

@@ -1,8 +1,24 @@
-  /////////////////////////////////////////
- // scraped strategies not working well //
-/////////////////////////////////////////
-
 #include "header.cpp"
+
+Graph round_table_assignment(Graph &G_in, ll team_count) {
+	Graph G = G_in;
+	G.teams = vector<Team>(team_count + 1);
+	FOR (i, G.V) {
+		G.nodes[i].team = i % (sz(G.teams) - 1) + 1;
+		G.teams[G.nodes[i].team].nodes.pb(i);
+	}
+	return G;
+}
+
+Graph random_assignment(Graph &G_in, ll team_count) {
+	Graph G = G_in;
+	G.teams = vector<Team>(team_count + 1);
+	FOR (i, G.V) {
+		G.nodes[i].team = rand() % (sz(G.teams) - 1) + 1;
+		G.teams[G.nodes[i].team].nodes.pb(i);
+	}
+	return G;
+}
 
 Graph greedy(Graph &G_in) { // inserts all nodes into one team
 	Graph G = G_in;
@@ -127,3 +143,93 @@ struct simulated_annealing_agent_team_adjustment { // generally better to focus 
 		}
 	}
 };
+
+struct physics_controller { // need more experimenting on physics_misc.py, but it might not be worth it
+	Graph G;
+	ld dt;
+	ll dim;
+	ld v_decay;
+	vector<ld> origin;
+	vector<vector<ld>> node_pos;
+	vector<vector<ld>> node_vel;
+	vector<ld> antigravity(vector<ld> &pos1, vector<ld> &pos2, ld coeff) {
+		ld dist = 0;
+		FOR (i, dim) {
+			dist += (pos1[i] - pos2[i]) * (pos1[i] - pos2[i]);
+		}
+		dist = sqrt(dist);
+		vector<ld> accel(dim);
+		FOR (i, dim) {
+			accel[i] = coeff * (pos1[i] - pos2[i]) / (dist * dist * dist);
+		}
+		return accel;
+	}
+	vector<ld> spring(vector<ld> &pos1, vector<ld> &pos2, ld equil, ld k = 1) {
+		ld dist = 0;
+		FOR (i, dim) {
+			dist += (pos1[i] - pos2[i]) * (pos1[i] - pos2[i]);
+		}
+		dist = sqrt(dist);
+		vector<ld> accel(dim);
+		FOR (i, dim) {
+			accel[i] = k * (dist - equil) * (pos1[i] - pos2[i]) / dist;
+		}
+		return accel;
+	}
+	void init(Graph &G_in, ld dt = 0.01, ll dim = 2, ld k = 1, ld v_decay = 0.99) {
+		G = G_in;
+		this->dt = dt;
+		this->dim = dim;
+		this->v_decay = v_decay;
+		origin = vector<ld>(dim);
+		node_pos = vector<vector<ld>>(G.V, vector<ld>(dim));
+		node_vel = vector<vector<ld>>(G.V, vector<ld>(dim));
+		FOR (i, G.V) {
+			FOR (j, dim) {
+				node_pos[i][j] = rand() % 1000;
+				node_vel[i][j] = 0;
+			}
+		}
+	}
+	void step() {
+		FOR (i, G.V) {
+			FOR (j, dim) {
+				node_vel[i][j] = 0;
+			}
+		}
+		FOR (i, G.V) {
+			FOR (j, i) {
+				vector<ld> accel = spring(node_pos[i], node_pos[j], G.weights[i][j]);
+				FOR (d, dim) {
+					node_vel[i][d] += accel[d] * dt;
+					node_vel[j][d] -= accel[d] * dt;
+				}
+			}
+		}
+		FOR (i, G.V) {
+			vector<ld> accel = spring(node_pos[i], origin, 0, 1000);
+			FOR (d, dim) {
+				node_vel[i][d] += accel[d] * dt;
+			}
+		}
+		FOR (i, G.V) {
+			FOR (j, dim) {
+				node_pos[i][j] += node_vel[i][j] * dt;
+			}
+		}
+		FOR (i, G.V) {
+			FOR (j, dim) {
+				node_vel[i][j] *= v_decay;
+			}
+		}
+	}
+};
+
+Graph physics(Graph &G_in, ll total_steps, ld dt = 0.001, ll dim = 2, ld k = 1) {
+	physics_controller controller;
+	controller.init(G_in, dt, dim, k);
+	FOR (i, total_steps) {
+		controller.step();
+	}
+	return controller.G;
+}
