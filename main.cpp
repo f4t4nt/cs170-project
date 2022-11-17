@@ -179,85 +179,76 @@ struct simulated_annealing_agent_swaps {
 	}
 };
 
-Graph simulated_annealing(Graph &G_in) {
+Graph simulated_annealing(Graph &G_in, ld decay_rate = 0.99) {
 	simulated_annealing_agent_team_adjustment agent;
 	agent.init(G_in);
 	while (agent.T > 0.0001) {
 		FOR (i, 1000) {
 			agent.step();
 		}
-		agent.T *= 0.99;
+		agent.T *= decay_rate;
 	}
 	return agent.G;
 }
 
-struct genetic_algorithm_controller_basic {
-	vector<Graph> population;
-	ll generations_left;
-	ld mutation_rate;
-	void init(Graph &G_in, ll team_count, ll population_size, ll generations, ld mutation_rate = 0.1) {
-		generations_left = generations;
-		this->mutation_rate = mutation_rate;
-		population = vector<Graph>(population_size);
+struct genetic_algorithm_controller_sim_annealing {
+	vector<pair<ld, Graph>> population;
+	ld T_start, T_end;
+	void init(Graph &G_in, ll team_count, ll population_size) {
+		population = vector<pair<ld, Graph>>(population_size);
 		FOR (i, population_size) {
-			population[i] = random_assignment(G_in, team_count);
+			population[i].second = random_assignment(G_in, team_count);
+			// population[i].second = G_in;
+			// read_teams(population[i].second, "40344_sim_anneal");
+			population[i].first = get_score(population[i].second);
 		}
+		T_start = 1;
+		T_end = 0.95;
 	}
 	void step() {
-		vector<Graph> new_population;
 		FOR (i, sz(population)) {
-			ll a = rand() % sz(population);
-			ll b = rand() % sz(population);
-			Graph G_a = population[a];
-			Graph G_b = population[b];
-			Graph G_c = crossover(G_a, G_b);
-			G_c = mutate(G_c, mutation_rate);
-			new_population.pb(G_c);
+			simulated_annealing_agent_swaps agent;
+			agent.init(population[i].second);
+			agent.T = T_start;
+			while (agent.T > T_end) {
+				FOR (i, 100) {
+					agent.step();
+				}
+				agent.T *= 0.99;
+			}
+			population[i].second = agent.G;
+			population[i].first = get_score(population[i].second);
 		}
-		sort(all(new_population), [](Graph &a, Graph &b) {
-			return get_score(a) > get_score(b);
+		sort(all(population), [](pair<ld, Graph> &a, pair<ld, Graph> &b) {
+			return a.first < b.first;
 		});
-		population = vector<Graph>(new_population.begin(), new_population.begin() + sz(population));
-		generations_left--;
-	}
-	Graph crossover(Graph &G_a, Graph &G_b) {
-		Graph G_c = G_a;
-		FOR (i, G_c.V) {
-			if (rand() % 2) {
-				G_c.nodes[i].team = G_b.nodes[i].team;
-			}
+		FOR (i, sz(population) / 2) {
+			population[i + sz(population) / 2] = population[i];
 		}
-		return G_c;
-	}
-	Graph mutate(Graph &G, ld rate) {
-		Graph G_m = G;
-		FOR (i, G_m.V) {
-			if (rand() % 1000000 < rate * 1000000) {
-				G_m.nodes[i].team = rand() % (sz(G_m.teams) - 1) + 1;
-			}
-		}
-		return G_m;
+		T_start *= 0.99;
+		T_end *= 0.99;
 	}
 };
 
-Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 100, ll generations = 1000, ld mutation_rate = 0.1) {
-	genetic_algorithm_controller_basic controller;
-	controller.init(G_in, team_count, population_size, generations, mutation_rate);
-	while (controller.generations_left > 0) {
+Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll generations = 1000, ld mutation_rate = 0.1) {
+	genetic_algorithm_controller_sim_annealing controller;
+	controller.init(G_in, team_count, population_size);
+	FOR (i, generations) {
 		controller.step();
 	}
-	return controller.population[0];
+	return controller.population[0].second;
 }
 
 int main() {
 	// srand(time(NULL));
-	set_io("tests/large/scatter_1/", "sim_anneal");
+	set_io("tests/large/max_weight/", "sim_anneal");
 
 	Graph G;
 	read_input(G);
+	G = genetic_algorithm(G, 10, 10, 200);
 	// read_teams(G, "65232_sim_anneal");
-	G = random_assignment(G, 10);
-	G = simulated_annealing(G);
+	// G = random_assignment(G, 10);
+	// G = simulated_annealing(G);
 	write_output(G);
 	return 0;
 }

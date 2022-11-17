@@ -233,3 +233,49 @@ Graph physics(Graph &G_in, ll total_steps, ld dt = 0.001, ll dim = 2, ld k = 1) 
 	}
 	return controller.G;
 }
+
+struct genetic_algorithm_controller_basic { // unmotivated genetic algorithm doesn't work well
+	vector<Graph> population;
+	ld mutation_rate;
+	void init(Graph &G_in, ll team_count, ll population_size, ld mutation_rate = 0.1) {
+		this->mutation_rate = mutation_rate;
+		population = vector<Graph>(population_size);
+		FOR (i, population_size) {
+			population[i] = random_assignment(G_in, team_count);
+		}
+	}
+	void step() {
+		vector<Graph> new_population;
+		FOR (i, sz(population)) {
+			ll a = rand() % sz(population);
+			ll b = rand() % sz(population);
+			Graph G_a = population[a];
+			Graph G_b = population[b];
+			Graph G_c = crossover(G_a, G_b);
+			G_c = mutate(G_c, mutation_rate);
+			new_population.pb(G_c);
+		}
+		sort(all(new_population), [](Graph &a, Graph &b) {
+			return get_score(a) > get_score(b);
+		});
+		population = vector<Graph>(new_population.begin(), new_population.begin() + sz(population));
+	}
+	Graph crossover(Graph &G_a, Graph &G_b) {
+		Graph G_c = G_a;
+		FOR (i, G_c.V) {
+			if (rand() % 2) {
+				G_c.nodes[i].team = G_b.nodes[i].team;
+			}
+		}
+		return G_c;
+	}
+	Graph mutate(Graph &G, ld rate) {
+		Graph G_m = G;
+		FOR (i, G_m.V) {
+			if (rand() % 1000000 < rate * 1000000) {
+				G_m.nodes[i].team = rand() % (sz(G_m.teams) - 1) + 1;
+			}
+		}
+		return G_m;
+	}
+};
