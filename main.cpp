@@ -199,7 +199,7 @@ struct genetic_algorithm_controller_sim_annealing {
 		FOR (i, population_size) {
 			population[i].second = random_assignment(G_in, team_count);
 			// population[i].second = G_in;
-			// read_teams(population[i].second, "40344_sim_anneal");
+			// read_teams(population[i].second, "32825_sim_anneal");
 			population[i].first = get_score(population[i].second);
 		}
 		T_start = 1;
@@ -207,6 +207,7 @@ struct genetic_algorithm_controller_sim_annealing {
 	}
 	void step() {
 		FOR (i, sz(population)) {
+			// simulated_annealing_agent_team_adjustment agent;
 			simulated_annealing_agent_swaps agent;
 			agent.init(population[i].second);
 			agent.T = T_start;
@@ -241,11 +242,11 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 
 int main() {
 	// srand(time(NULL));
-	set_io("tests/large/max_weight/", "sim_anneal");
+	set_io("tests/small/multiply/", "sim_anneal");
 
 	Graph G;
 	read_input(G);
-	G = genetic_algorithm(G, 10, 10, 200);
+	G = genetic_algorithm(G, 12, 10, 200);
 	// read_teams(G, "65232_sim_anneal");
 	// G = random_assignment(G, 10);
 	// G = simulated_annealing(G);

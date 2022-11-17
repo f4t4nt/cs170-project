@@ -259,5 +259,3 @@ def run_physics_file():
     # visualize_physics_2d(history[-1], edge_weights, [G.nodes[i]['team'] for i in range(G.number_of_nodes())])
     print(score(G))
     # print_teams(G)
-
-run_physics_file()
