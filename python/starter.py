@@ -191,11 +191,13 @@ def run_all(solver, in_dir, out_dir, overwrite: bool=False):
                 run(solver, in_file, out_file, overwrite)
 
 
-def tar(out_dir, overwrite=False):
-    path = f'../submission.tar'
+def tar(out_dir, path='./submission.tar', overwrite=False):
+    path = os.path.abspath(path)
+    print(f'Creating {path}')
     assert overwrite or not os.path.exists(path), \
         'File already exists and overwrite set to False. Move file or set overwrite to True to proceed.'
     if os.path.exists(path):
         print(f'Overwriting {path}')
     with tarfile.open(path, 'w') as fp:
         fp.add(out_dir)
+    print(f'Created {path}')

@@ -240,9 +240,9 @@ struct genetic_algorithm_controller_sim_annealing_ants {
 		G_0 = G_in;
 		population = vector<pair<ld, Graph>>(population_size);
 		FOR (i, population_size) {
-			// population[i].second = random_assignment(G_in, team_count);
-			population[i].second = G_in;
-			read_teams(population[i].second, "100062_sim_anneal");
+			population[i].second = random_assignment(G_in, team_count + rand() % 10 - 5);
+			// population[i].second = G_in;
+			// read_teams(population[i].second, "100062_sim_anneal");
 		}
 		T_start = 1;
 		T_end = 0.95;
@@ -277,60 +277,115 @@ struct genetic_algorithm_controller_sim_annealing_ants {
 		}
 		return G;
 	}
-	void step() {
-		FOR (i, sz(population)) {
-			// simulated_annealing_agent_team_adjustment agent;
-			simulated_annealing_agent_swaps agent;
-			agent.init(population[i].second);
-			agent.T = T_start;
-			while (agent.T > T_end) {
-				FOR (i, 100) {
-					agent.step();
+	void step(bool team_adjustment = false) {
+		if (team_adjustment) {
+			FOR (i, sz(population)) {
+				simulated_annealing_agent_team_adjustment agent;
+				// simulated_annealing_agent_swaps agent;
+				agent.init(population[i].second);
+				agent.T = T_start;
+				while (agent.T > T_end) {
+					FOR (i, 100) {
+						agent.step();
+					}
+					agent.T *= 0.95;
 				}
-				agent.T *= 0.99;
+				population[i].second = agent.G;
+				population[i].first = get_score(population[i].second);
 			}
-			population[i].second = agent.G;
-			population[i].first = get_score(population[i].second);
-		}
-		sort(all(population), [](pair<ld, Graph> &a, pair<ld, Graph> &b) {
-			return a.first < b.first;
-		});
-		FOR (i, sz(population) / 2) {
-			FOR (u, sz(population[i].second.nodes)) {
-				FOR (v, sz(population[i].second.nodes)) {
-					if (population[i].second.nodes[u].team == population[i].second.nodes[v].team) {
-						pheromones[u][v] += 1.0 / population[i].first;
+			sort(all(population), [](pair<ld, Graph> &a, pair<ld, Graph> &b) {
+				return a.first < b.first;
+			});
+			FOR (i, sz(population) / 2) {
+				FOR (u, sz(population[i].second.nodes)) {
+					FOR (v, sz(population[i].second.nodes)) {
+						if (population[i].second.nodes[u].team == population[i].second.nodes[v].team) {
+							pheromones[u][v] += 1.0 / population[i].first;
+						}
 					}
 				}
 			}
+			FOR (i, sz(population) / 2) {
+				population[i + sz(population) / 2].second = generate_from_pheromones();
+			}
+			T_start *= 0.99;
+			T_end *= 0.99;
+		} else {
+			FOR (i, sz(population)) {
+				// simulated_annealing_agent_team_adjustment agent;
+				simulated_annealing_agent_swaps agent;
+				agent.init(population[i].second);
+				agent.T = T_start;
+				while (agent.T > T_end) {
+					FOR (i, 100) {
+						agent.step();
+					}
+					agent.T *= 0.95;
+				}
+				population[i].second = agent.G;
+				population[i].first = get_score(population[i].second);
+			}
+			sort(all(population), [](pair<ld, Graph> &a, pair<ld, Graph> &b) {
+				return a.first < b.first;
+			});
+			FOR (i, sz(population) / 2) {
+				FOR (u, sz(population[i].second.nodes)) {
+					FOR (v, sz(population[i].second.nodes)) {
+						if (population[i].second.nodes[u].team == population[i].second.nodes[v].team) {
+							pheromones[u][v] += 1.0 / population[i].first;
+						}
+					}
+				}
+			}
+			FOR (i, sz(population) / 2) {
+				population[i + sz(population) / 2].second = generate_from_pheromones();
+			}
+			T_start *= 0.99;
+			T_end *= 0.99;
 		}
-		FOR (i, sz(population) / 2) {
-			population[i + sz(population) / 2].second = generate_from_pheromones();
-		}
-		T_start *= 0.99;
-		T_end *= 0.99;
 	}
 };
 
 Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll generations = 1000, ld mutation_rate = 0.1) {
 	genetic_algorithm_controller_sim_annealing_ants controller;
 	controller.init(G_in, team_count, population_size);
-	FOR (i, generations) {
+	FOR (i, 10) {
+		controller.step(true);
+	}
+	FOB (i, 10, generations) {
 		controller.step();
 	}
 	return controller.population[0].second;
 }
 
-int main() {
-	// srand(time(NULL));
-	set_io("tests/small/multiply/", "sim_anneal");
+// int main() {
+// 	// srand(time(NULL));
+// 	set_io("tests/small/multiply/", "sim_anneal");
 
-	Graph G;
-	read_input(G);
-	G = genetic_algorithm(G, 12, 10, 300);
-	// read_teams(G, "65232_sim_anneal");
-	// G = random_assignment(G, 10);
-	// G = simulated_annealing(G);
-	write_output(G);
+// 	Graph G;
+// 	read_input(G);
+// 	G = genetic_algorithm(G, 12, 10, 300);
+// 	// read_teams(G, "65232_sim_anneal");
+// 	// G = random_assignment(G, 10);
+// 	// G = simulated_annealing(G);
+// 	write_output(G);
+// 	return 0;
+// }
+
+int main() {
+	vector<str> test_sets = {"small", "medium", "large"};
+	ll test_count = 260;
+	FORE (test_sz, test_sets) {
+		ll test_id = (test_sz == "small" ? 13 : 1);
+		while (test_id <= test_count) {
+			set_io("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/", "sim_anneal");
+			cout << "Running " << test_sz << test_id << '\n';
+			Graph G;
+			read_input(G);
+			G = genetic_algorithm(G, 12, 10, 80);
+			write_output(G);
+			test_id++;
+		}
+	}
 	return 0;
 }

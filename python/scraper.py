@@ -1,16 +1,19 @@
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 import time
+import json
 
 driver = webdriver.Chrome(ChromeDriverManager().install())
 driver.get("https://170-leaderboard.vercel.app/team/gamers")
 
+data = driver.execute_script("return document.body.innerText")
+print(data)
 table = dict()
-time.sleep(5)
-
-for row in driver.find_elements('xpath', '//tr'):
-    cells = row.find_elements('xpath', './/td')
-    if len(cells) == 2:
-        table[cells[0].text] = cells[1].text
-
-print(table)
+for line in data.splitlines():
+    if line.startswith("small") or line.startswith("medium") or line.startswith("large"):
+        line = line.split()
+        table[line[0] + line[1]] = (float(line[2]), int(line[3]))
+sorted_table = sorted(table.items(), key=lambda item: item[1][1], reverse=True)
+for i in sorted_table:
+    if i[1][1] != 1:
+        print(i)
