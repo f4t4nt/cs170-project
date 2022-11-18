@@ -1,13 +1,10 @@
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
-import time
-import json
 
 driver = webdriver.Chrome(ChromeDriverManager().install())
-driver.get("https://170-leaderboard.vercel.app/team/gamers")
+driver.get("https://170-leaderboard.vercel.app/team/discordggTYsy64VcWT")
 
 data = driver.execute_script("return document.body.innerText")
-print(data)
 table = dict()
 for line in data.splitlines():
     if line.startswith("small") or line.startswith("medium") or line.startswith("large"):
