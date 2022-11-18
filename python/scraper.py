@@ -3,7 +3,7 @@ from webdriver_manager.chrome import ChromeDriverManager
 import time
 
 driver = webdriver.Chrome(ChromeDriverManager().install())
-driver.get("https://berkeley-cs170.github.io/project-leaderboard/?team=MeanPairwiseSocialDistance")
+driver.get("https://170-leaderboard.vercel.app/team/gamers")
 
 table = dict()
 time.sleep(5)
