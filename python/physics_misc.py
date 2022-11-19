@@ -251,7 +251,7 @@ def print_teams(G: nx.Graph):
     print()
 
 def run_physics_file():
-    IN_FILE = 'tests/small/random_1/'
+    IN_FILE = 'tests/medium/medium41/'
     G = read_input(IN_FILE + 'graph.in')
     history, node_pos, edge_weights = physics_solve(G)
     get_teams(G, 10, node_pos)
