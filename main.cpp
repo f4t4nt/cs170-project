@@ -356,12 +356,14 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 	FOR (i, 50) {
 		controller.step();
 	}
+	Graph all_time_best = controller.population[0].second;
+	ld all_time_best_score = controller.population[0].first;
 	ld previous_score = 1e18;
 	ll stagnation = 0;
 	FOR (i, generations) {
 		controller.step(true);
 		ld score = controller.population[0].first;
-		if (abs(score - previous_score) <= 1) {
+		if (abs(score - previous_score) / previous_score < 1e-3) {
 			stagnation++;
 			if (stagnation >= 10) {
 				break;
@@ -369,9 +371,13 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 		} else {
 			stagnation = 0;
 		}
+		if (score < all_time_best_score) {
+			all_time_best = controller.population[0].second;
+			all_time_best_score = score;
+		}
 		previous_score = score;
 	}
-	return controller.population[0].second;
+	return all_time_best;
 }
 
 // int main() {
@@ -391,9 +397,9 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 // }
 
 int main() {
-	vector<str> test_sets = {/* "small", "medium", */"large"};
-	ll test_count = 259;
+	vector<str> test_sets = {"small", "medium", "large"};
 	FORE (test_sz, test_sets) {
+		ll test_count = (test_sz == "small" ? 13 : 260);
 		ll test_id = test_count;
 		while (test_id > 0) {
 			set_io("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/", "sim_anneal");
