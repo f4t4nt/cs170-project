@@ -59,7 +59,7 @@ constexpr ld K_EXP = 0.5;
 constexpr ld K_COEFFICIENT = 1e2;
 constexpr ld B_EXP = 70;
 
-constexpr ld INF = 1e18;
+constexpr ld INF = 1e30;
 
 str IN_FILE;
 str RUN_TYPE;
@@ -110,6 +110,15 @@ struct Graph {
 	vector<Team> teams;
 };
 
+struct Result {
+	str size;
+	ll id;
+	ll rank;
+	ld score;
+	str path;
+	str url;
+};
+
 tuple<ld, ld, ld> score_separated(Graph &G) {
 	ld total_nodes_processed = 0;
 	FOR (i, G.V) {
@@ -119,10 +128,7 @@ tuple<ld, ld, ld> score_separated(Graph &G) {
 	}
 	ld k = sz(G.teams) - 1;
 	ld b = 0;
-	// assert(sz(G.teams[0].nodes) == 0);
-	if (sz(G.teams) < 2 || sz(G.teams[0].nodes) != 0) {
-		return {INF, INF, INF * 100};
-	}
+	assert(sz(G.teams[0].nodes) == 0);
 	FOB (i, 1, sz(G.teams)) {
 		ld norm = sz(G.teams[i].nodes) / total_nodes_processed - 1 / k;
 		b += norm * norm;
@@ -189,6 +195,44 @@ void read_teams(Graph &G, str file) {
 		G.nodes[i].team = data[i];
 		G.teams[data[i]].nodes.pb(i);
 	}
+}
+
+void read_graph(Graph &G, str test_sz, ll test_id, str run_type = "") {
+	set_io("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/", run_type);
+	read_input(G);
+}
+
+void read_best_graph(Graph &G, str test_sz, ll test_id, str run_type = "") {
+	read_graph(G, test_sz, test_id, run_type);
+	str best_team_file_name = "";
+	for (const auto & entry : filesystem::directory_iterator("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/")) {
+		filesystem::path team_file;
+		team_file = entry.path();
+		if (team_file.extension() != ".out") {
+			continue;
+		}
+		str team_file_name = team_file.filename().string();
+		team_file_name = team_file_name.substr(0, team_file_name.find("."));
+		if (best_team_file_name == "" ||
+			stoll(team_file_name.substr(0, team_file_name.find("_"))) <
+			stoll(best_team_file_name.substr(0, best_team_file_name.find("_")))) {
+			best_team_file_name = team_file_name;
+		}
+	}
+	read_teams(G, best_team_file_name);
+}
+
+vector<Result> read_queue() {
+	vector<Result> results;
+	ifstream fin("queue.txt");
+	str line;
+	while (getline(fin, line)) {
+		stringstream ss(line);
+		str size, id, rank, score, url;
+		ss >> size >> id >> rank >> score >> url;
+		results.pb({size, stoll(id), stoll(rank), stold(score), url, "tests/" + size + "/" + size + id + "/"});
+	}
+	return results;
 }
 
 str score_to_str(ld score) {

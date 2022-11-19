@@ -197,13 +197,11 @@ struct genetic_algorithm_controller_sim_annealing {
 	void init(Graph &G_in, ll team_count, ll population_size) {
 		population = vector<pair<ld, Graph>>(population_size);
 		FOR (i, population_size) {
-			population[i].second = G_in;
-			population[i].second = random_assignment(G_in, sz(G_in.teams) - 1 + rand() % 5 - 2);
+			// population[i].second = G_in;
+			population[i].second = random_assignment(G_in, team_count);
 			// read_teams(population[i].second, "32825_sim_anneal");
 			population[i].first = get_score(population[i].second);
 		}
-		population[0].second = G_in;
-		population[0].first = get_score(population[0].second);
 		T_start = 10;
 		T_end = 9.5;
 	}
@@ -245,8 +243,6 @@ struct genetic_algorithm_controller_sim_annealing_ants {
 		population = vector<pair<ld, Graph>>(population_size);
 		FOR (i, population_size) {
 			population[i].second = random_assignment(G_in, team_count);
-			// population[i].second = G_in;
-			// read_teams(population[i].second, "3316_sim_anneal");
 		}
 		T_start = 10;
 		T_end = 9.5;
@@ -375,6 +371,9 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 			all_time_best = controller.population[0].second;
 			all_time_best_score = score;
 		}
+		if (all_time_best_score < 310.8) {
+			break;
+		}
 		previous_score = score;
 	}
 	return all_time_best;
@@ -382,8 +381,8 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 
 Graph coloring(Graph &G_in) {
 	Graph G = G_in;
-	ld best_score = 1e18;
-	FOR (threshold, MAX_WEIGHT) {
+	ld best_score = INF;
+	FOR (threshold, 10) {
 		Graph G_copy = G;
 		FOR (i, G_copy.V) {
 			G_copy.nodes[i].team = -1;
@@ -397,8 +396,22 @@ Graph coloring(Graph &G_in) {
 				}
 			}
 			ll team = 1;
-			while (neighbors.find(team) != neighbors.end()) {
+			vector<ll> possible_teams;
+			while (team < G_copy.teams.size()) {
+				if (neighbors.find(team) == neighbors.end()) {
+					possible_teams.push_back(team);
+				}
 				team++;
+			}
+			if (possible_teams.empty()) {
+				team = G_copy.teams.size();
+			} else {
+				team = possible_teams[0];
+				FOR (j, sz(possible_teams)) {
+					if (sz(G_copy.teams[possible_teams[j]].nodes) < sz(G_copy.teams[team].nodes)) {
+						team = possible_teams[j];
+					}
+				}
 			}
 			G_copy.nodes[i].team = team;
 			if (team >= sz(G_copy.teams)) {
@@ -415,6 +428,16 @@ Graph coloring(Graph &G_in) {
 		}
 	}
 	return G;
+}
+
+int main() {
+	vector<Result> results = read_queue();
+	Graph G;
+	read_graph(G, "large", 113, "coloring");
+	// G = coloring(G);
+	G = genetic_algorithm(G, 2, 20, 100, 0.1);
+	write_output(G);
+	return 0;
 }
 
 // int main() {
