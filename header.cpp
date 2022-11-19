@@ -119,7 +119,10 @@ tuple<ld, ld, ld> score_separated(Graph &G) {
 	}
 	ld k = sz(G.teams) - 1;
 	ld b = 0;
-	assert(sz(G.teams[0].nodes) == 0);
+	// assert(sz(G.teams[0].nodes) == 0);
+	if (sz(G.teams) < 2 || sz(G.teams[0].nodes) != 0) {
+		return {INF, INF, INF * 100};
+	}
 	FOB (i, 1, sz(G.teams)) {
 		ld norm = sz(G.teams[i].nodes) / total_nodes_processed - 1 / k;
 		b += norm * norm;

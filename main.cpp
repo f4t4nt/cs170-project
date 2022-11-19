@@ -380,6 +380,75 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 	return all_time_best;
 }
 
+Graph coloring(Graph &G_in) {
+	Graph G = G_in;
+	ld best_score = 1e18;
+	FOR (threshold, MAX_WEIGHT) {
+		Graph G_copy = G;
+		FOR (i, G_copy.V) {
+			G_copy.nodes[i].team = -1;
+		}
+		G_copy.teams = vector<Team>(1);
+		FOR (i, G_copy.V) {
+			set<ll> neighbors;
+			FOR (j, G_copy.V) {
+				if (G_copy.weights[i][j] > threshold) {
+					neighbors.insert(G_copy.nodes[j].team);
+				}
+			}
+			ll team = 1;
+			while (neighbors.find(team) != neighbors.end()) {
+				team++;
+			}
+			G_copy.nodes[i].team = team;
+			if (team >= sz(G_copy.teams)) {
+				G_copy.teams.pb({});
+				G_copy.teams.back().nodes.pb(i);
+			} else {
+				G_copy.teams[team].nodes.pb(i);
+			}
+		}
+		ld score = get_score(G_copy);
+		if (score < best_score) {
+			best_score = score;
+			G = G_copy;
+		}
+	}
+	return G;
+}
+
+// int main() {
+// 	vector<str> tests = {
+// 		"large163",
+// 		"large168",
+// 		"large170",
+// 	};
+// 	FORE (test, tests) {
+// 		str num = "";
+// 		str path = "";
+// 		if (test[0] == 'l') {
+// 			path = "tests/large/";
+// 			num = test.substr(5);
+// 		} else if (test[0] == 'm') {
+// 			path = "tests/medium/";
+// 			num = test.substr(7);
+// 		} else if (test[0] == 's') {
+// 			path = "tests/small/";
+// 			num = test.substr(6);
+// 		}
+// 		path += test;
+// 		path += "/";
+// 		set_io(path, "coloring");
+
+// 		Graph G;
+// 		cout << "Test " << test << endl;
+// 		read_input(G);
+// 		G = coloring(G);
+// 		write_output(G);
+// 	}
+// 	return 0;
+// }
+
 // int main() {
 // 	FOB (i, 3, 12) {
 // 		srand(time(NULL));
@@ -396,34 +465,34 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 // 	return 0;
 // }
 
-int main() {
-	vector<str> test_sets = {"small", "medium", "large"};
-	FORE (test_sz, test_sets) {
-		ll test_count = (test_sz == "small" ? 13 : 260);
-		ll test_id = test_count;
-		while (test_id > 0) {
-			set_io("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/", "sim_anneal");
-			cout << "Running " << test_sz << test_id << '\n';
-			Graph G;
-			read_input(G);
-			str best_team_file_name = "9999999999";
-			for (const auto & entry : filesystem::directory_iterator("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/")) {
-				filesystem::path team_file;
-				team_file = entry.path();
-				if (team_file.extension() == ".in") {
-					continue;
-				}
-				str team_file_name = team_file.filename().string();
-				team_file_name = team_file_name.substr(0, team_file_name.find("."));
-				if (stoll(team_file_name.substr(0, team_file_name.find("_"))) < stoll(best_team_file_name.substr(0, best_team_file_name.find("_")))) {
-					best_team_file_name = team_file_name;
-				}
-			}
-			read_teams(G, best_team_file_name);
-			G = genetic_algorithm(G, 12, 10, 300);
-			write_output(G);
-			test_id--;
-		}
-	}
-	return 0;
-}
+// int main() {
+// 	vector<str> test_sets = {"small", "medium", "large"};
+// 	FORE (test_sz, test_sets) {
+// 		ll test_count = (test_sz == "small" ? 13 : 260);
+// 		ll test_id = test_count;
+// 		while (test_id > 0) {
+// 			set_io("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/", "sim_anneal");
+// 			cout << "Running " << test_sz << test_id << '\n';
+// 			Graph G;
+// 			read_input(G);
+// 			str best_team_file_name = "9999999999";
+// 			for (const auto & entry : filesystem::directory_iterator("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/")) {
+// 				filesystem::path team_file;
+// 				team_file = entry.path();
+// 				if (team_file.extension() == ".in") {
+// 					continue;
+// 				}
+// 				str team_file_name = team_file.filename().string();
+// 				team_file_name = team_file_name.substr(0, team_file_name.find("."));
+// 				if (stoll(team_file_name.substr(0, team_file_name.find("_"))) < stoll(best_team_file_name.substr(0, best_team_file_name.find("_")))) {
+// 					best_team_file_name = team_file_name;
+// 				}
+// 			}
+// 			read_teams(G, best_team_file_name);
+// 			G = genetic_algorithm(G, 12, 10, 300);
+// 			write_output(G);
+// 			test_id--;
+// 		}
+// 	}
+// 	return 0;
+// }
