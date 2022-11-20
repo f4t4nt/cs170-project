@@ -346,7 +346,7 @@ struct genetic_algorithm_controller_sim_annealing_ants {
 	}
 };
 
-Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll generations = 1000, ld mutation_rate = 0.1) {
+Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll generations = 1000, ld mutation_rate = 0.1, ld best_score = 0.0) {
 	genetic_algorithm_controller_sim_annealing controller;
 	controller.init(G_in, team_count, population_size);
 	FOR (i, 50) {
@@ -370,9 +370,9 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 		if (score < all_time_best_score) {
 			all_time_best = controller.population[0].second;
 			all_time_best_score = score;
-		}
-		if (all_time_best_score < 310.8) {
-			break;
+			if (all_time_best_score < best_score + 1e-3) {
+				break;
+			}
 		}
 		previous_score = score;
 	}
@@ -432,90 +432,18 @@ Graph coloring(Graph &G_in) {
 
 int main() {
 	vector<Result> results = read_queue();
-	Graph G;
-	read_graph(G, "large", 113, "coloring");
-	// G = coloring(G);
-	G = genetic_algorithm(G, 2, 20, 100, 0.1);
-	write_output(G);
+	FORE (result, results) {
+		ll team_count = max_teams(result.best_score);
+		while (team_count >= 2) {
+			Graph G;
+			read_graph(G, result.size, result.id, "focus");
+			G = genetic_algorithm(G, team_count, 20, 300, 0.1, result.best_score);
+			write_output(G);
+			if (get_score(G) < result.best_score) {
+				break;
+			}
+			team_count--;
+		}
+	}
 	return 0;
 }
-
-// int main() {
-// 	vector<str> tests = {
-// 		"large163",
-// 		"large168",
-// 		"large170",
-// 	};
-// 	FORE (test, tests) {
-// 		str num = "";
-// 		str path = "";
-// 		if (test[0] == 'l') {
-// 			path = "tests/large/";
-// 			num = test.substr(5);
-// 		} else if (test[0] == 'm') {
-// 			path = "tests/medium/";
-// 			num = test.substr(7);
-// 		} else if (test[0] == 's') {
-// 			path = "tests/small/";
-// 			num = test.substr(6);
-// 		}
-// 		path += test;
-// 		path += "/";
-// 		set_io(path, "coloring");
-
-// 		Graph G;
-// 		cout << "Test " << test << endl;
-// 		read_input(G);
-// 		G = coloring(G);
-// 		write_output(G);
-// 	}
-// 	return 0;
-// }
-
-// int main() {
-// 	FOB (i, 3, 12) {
-// 		srand(time(NULL));
-// 		set_io("tests/medium/medium105/", "sim_anneal");
-
-// 		Graph G;
-// 		read_input(G);
-// 		G = genetic_algorithm(G, i, 10, 300);
-// 		// read_teams(G, "65232_sim_anneal");
-// 		// G = random_assignment(G, 10);
-// 		// G = simulated_annealing(G);
-// 		write_output(G);
-// 	}
-// 	return 0;
-// }
-
-// int main() {
-// 	vector<str> test_sets = {"small", "medium", "large"};
-// 	FORE (test_sz, test_sets) {
-// 		ll test_count = (test_sz == "small" ? 13 : 260);
-// 		ll test_id = test_count;
-// 		while (test_id > 0) {
-// 			set_io("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/", "sim_anneal");
-// 			cout << "Running " << test_sz << test_id << '\n';
-// 			Graph G;
-// 			read_input(G);
-// 			str best_team_file_name = "9999999999";
-// 			for (const auto & entry : filesystem::directory_iterator("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/")) {
-// 				filesystem::path team_file;
-// 				team_file = entry.path();
-// 				if (team_file.extension() == ".in") {
-// 					continue;
-// 				}
-// 				str team_file_name = team_file.filename().string();
-// 				team_file_name = team_file_name.substr(0, team_file_name.find("."));
-// 				if (stoll(team_file_name.substr(0, team_file_name.find("_"))) < stoll(best_team_file_name.substr(0, best_team_file_name.find("_")))) {
-// 					best_team_file_name = team_file_name;
-// 				}
-// 			}
-// 			read_teams(G, best_team_file_name);
-// 			G = genetic_algorithm(G, 12, 10, 300);
-// 			write_output(G);
-// 			test_id--;
-// 		}
-// 	}
-// 	return 0;
-// }

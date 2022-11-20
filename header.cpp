@@ -115,6 +115,7 @@ struct Result {
 	ll id;
 	ll rank;
 	ld score;
+	ld best_score;
 	str path;
 	str url;
 };
@@ -222,15 +223,39 @@ void read_best_graph(Graph &G, str test_sz, ll test_id, str run_type = "") {
 	read_teams(G, best_team_file_name);
 }
 
+ld get_own_score(str test_sz, str test_id) {
+	ll best_score = -1;
+	for (const auto & entry : filesystem::directory_iterator("tests/" + test_sz + "/" + test_sz + test_id + "/")) {
+		filesystem::path team_file;
+		team_file = entry.path();
+		if (team_file.extension() != ".out") {
+			continue;
+		}
+		str team_file_name = team_file.filename().string();
+		team_file_name = team_file_name.substr(0, team_file_name.find("."));
+		if (best_score == -1 ||
+			stoll(team_file_name.substr(0, team_file_name.find("_"))) < best_score) {
+			best_score = stoll(team_file_name.substr(0, team_file_name.find("_")));
+		}
+	}
+	return best_score;
+}
+
 vector<Result> read_queue() {
 	vector<Result> results;
 	ifstream fin("queue.txt");
 	str line;
 	while (getline(fin, line)) {
 		stringstream ss(line);
-		str size, id, rank, score, url;
-		ss >> size >> id >> rank >> score >> url;
-		results.pb({size, stoll(id), stoll(rank), stold(score), url, "tests/" + size + "/" + size + id + "/"});
+		str size, id, rank, best_score, url;
+		ss >> size >> id >> rank >> best_score >> url;
+		results.pb({size, 
+			stoll(id),
+			stoll(rank),
+			get_own_score(size, id),
+			stold(best_score),
+			"tests/" + size + "/" + size + id + "/",
+			url});
 	}
 	return results;
 }
@@ -252,6 +277,10 @@ void write_output(Graph &G) {
 		fout << ", " << G.nodes[i].team;
 	}
 	fout << "]" << endl;
+}
+
+ll max_teams(ld score) {
+	return (ll) floor(log(score / K_COEFFICIENT) / K_EXP);
 }
 
 ll weighted_random(vector<ld> &weights, ll range = 0) {
