@@ -156,15 +156,15 @@ int main() {
 		// OptimizedGraph G;
 		// optimized_read_graph(G, result.size, result.id, "optimized");
 		// while (team_count >= 2) {
+		// 	cout << "team_count = " << team_count << endl;
 		// 	G.T = team_count;
 		// 	G.team_counts = vector<ll>(team_count, 0);
 		// 	G.B_vec = vector<ld>(team_count, 0);
-		// 	G = optimized_algorithm(G, team_count, 20, 1000, 10, 9.5);
+		// 	G = optimized_algorithm(G, team_count, 20, 1000, 100, 95);
 		// 	optimized_write_output(G);
 		// 	if (optimized_get_score(G) < result.best_score + 1e-3) {
-		// 		cout << "Beat best score of " << result.best_score << " with " << optimized_get_score(G) <<
+		// 		cout << "beat rank 1 " << result.best_score << " with " << optimized_get_score(G) <<
 		// 			" on " << result.size << result.id << endl;
-		// 		break;
 		// 	}
 		// 	team_count--;
 		// }
