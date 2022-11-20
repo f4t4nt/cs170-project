@@ -21,7 +21,15 @@ struct OptimizedAnnealingAgent {
 		// G.team_counts[old_team]--;
 		// G.team_counts[new_team]++;
 		// ld test_score = optimized_get_score(G);
-		// assert (abs(new_score - test_score) < 1e-6);
+		// if (abs(new_score - test_score) >= 1e-6) {
+		// 	cout << "ERROR: " << new_score << " " << test_score << endl;
+		// 	cout << "C_w: " << C_w << " " << G.C_w << endl;
+		// 	cout << "K: " << K << " " << G.K << endl;
+		// 	cout << "B: " << B << " " << exp(B_EXP * sqrt(B_norm_squared)) << endl;
+		// 	cout << "B_norm_squared: " << B_norm_squared << " " << G.B_norm_squared << endl;
+		// 	optimized_get_score(G, node);
+		// 	assert(false);
+		// }
 		// G.node_teams[node] = old_team;
 		// G.team_counts[old_team]++;
 		// G.team_counts[new_team]--;
@@ -70,7 +78,8 @@ struct OptimizedGeneticController {
 		T_start = T_start0;
 		T_end = T_end0;
 		FOR (i, population_size) {
-			population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+			// population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+			population[i] = {G_in, T_start};
 			optimized_get_score(population[i].G);
 		}
 	}
@@ -121,41 +130,49 @@ OptimizedGraph optimized_algorithm(OptimizedGraph &G_in, ll team_count, ll popul
 		if (score < best_score) {
 			best_score = score;
 			G = controller.population[0].G;
-			// if (best_score < target_score + 1e-3) {
-			// 	break;
-			// }
+			if (best_score < target_score + 1e-3) {
+				break;
+			}
 		}
 	}
 	return G;
 }
 
 int main() {
-	srand(time(NULL));
 	vector<Result> results = read_queue();
-	while (true) {
-		FORE (result, results) {
-			ll team_count = max_teams(result.best_score);
-			// while (team_count >= 2) {
-			// 	Graph G;
-			// 	read_graph(G, result.size, result.id, "focus");
-			// 	G = genetic_algorithm(G, team_count, 20, 300, 0.1, result.best_score);
-			// 	write_output(G);
-			// 	if (get_score(G) < result.best_score) {
-			// 		break;
-			// 	}
-			// 	team_count--;
-			// }
-			OptimizedGraph G;
-			optimized_read_graph(G, result.size, result.id, "optimized");
-			while (team_count >= 2) {
-				G.T = team_count;
-				G.team_counts = vector<ll>(team_count, 0);
-				G.B_vec = vector<ld>(team_count, 0);
-				G = optimized_algorithm(G, team_count, 20, 1000, 10, 9.5);
-				optimized_write_output(G);
-				team_count--;
-			}
-		}
+	FORE (result, results) {
+		ll team_count = max_teams(result.best_score);
+		// while (team_count >= 2) {
+		// 	Graph G;
+		// 	read_graph(G, result.size, result.id, "focus");
+		// 	G = genetic_algorithm(G, team_count, 20, 300, 0.1, result.best_score);
+		// 	write_output(G);
+		// 	if (get_score(G) < result.best_score) {
+		// 		break;
+		// 	}
+		// 	team_count--;
+		// }
+
+		// OptimizedGraph G;
+		// optimized_read_graph(G, result.size, result.id, "optimized");
+		// while (team_count >= 2) {
+		// 	G.T = team_count;
+		// 	G.team_counts = vector<ll>(team_count, 0);
+		// 	G.B_vec = vector<ld>(team_count, 0);
+		// 	G = optimized_algorithm(G, team_count, 20, 1000, 10, 9.5);
+		// 	optimized_write_output(G);
+		// 	if (optimized_get_score(G) < result.best_score + 1e-3) {
+		// 		cout << "Beat best score of " << result.best_score << " with " << optimized_get_score(G) <<
+		// 			" on " << result.size << result.id << endl;
+		// 		break;
+		// 	}
+		// 	team_count--;
+		// }
+
+		OptimizedGraph G;
+		optimized_read_best_graph(G, result.size, result.id, "optimized");
+		G = optimized_algorithm(G, team_count, 20, 1000, 10, 9.5, 10, result.best_score);
+		optimized_write_output(G);
 	}
 	return 0;
 }
