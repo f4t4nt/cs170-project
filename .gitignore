@@ -1,7 +1,9 @@
 /.vscode
+/.vs
 /bin
 /python/__pycache__
 /*.exe
 /*.ilk
 /*.obj
 /*.pdb
+/*.json
