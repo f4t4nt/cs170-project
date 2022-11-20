@@ -179,7 +179,7 @@ medium 41 2 272.8281828459045 https://170-leaderboard.vercel.app/input/medium/41
 medium 45 2 280343.8793492735 https://170-leaderboard.vercel.app/input/medium/45
 medium 50 2 2009.5536923187667 https://170-leaderboard.vercel.app/input/medium/50
 medium 51 2 2009.5536923187667 https://170-leaderboard.vercel.app/input/medium/51
-medium 56 2 36579.377444459504 https://170-leaderboard.vercel.app/input/medium/56
+medium 56 2 35107.17434373821 https://170-leaderboard.vercel.app/input/medium/56
 medium 58 2 3312.786328891362 https://170-leaderboard.vercel.app/input/medium/58
 medium 63 2 3663.786328891362 https://170-leaderboard.vercel.app/input/medium/63
 medium 71 2 149855.13306472337 https://170-leaderboard.vercel.app/input/medium/71
