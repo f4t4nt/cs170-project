@@ -114,7 +114,7 @@ struct OptimizedGraph {
 	ll V, E, T;
 	ld C_w, K, B_norm_squared, score;
 	vector<ld> B_vec;
-	vector<ll> node_teams, team_counts;
+	vector<ll> node_teams, team_counts, edge_indices;
 	vector<tuple<short, short, short>> edges;
 	vector<vector<ll>> weights;
 };
@@ -165,10 +165,10 @@ ld get_score(Graph &G) {
 ld optimized_get_score(OptimizedGraph &G) {
 	G.C_w = 0;
 	FORE (edge, G.edges) {
-		short s, d, w;
-		tie(s, d, w) = edge;
-		if (G.node_teams[s] == G.node_teams[d]) {
-			G.C_w += w;
+		short source, target, weight;
+		tie(source, target, weight) = edge;
+		if (G.node_teams[source] == G.node_teams[target]) {
+			G.C_w += weight;
 		}
 	}
 	G.C_w /= 2;
@@ -182,7 +182,7 @@ ld optimized_get_score(OptimizedGraph &G) {
 	return G.score;
 }
 
-tuple<ld, ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, ll node, ll old_team, ll new_team) {
+tuple<ld, ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, ll &node, ll &old_team, ll &new_team) {
 	ld B_old = G.B_vec[old_team] - 1.0 / G.V,
 		B_new = G.B_vec[new_team] + 1.0 / G.V;
 	ld B_norm_squared = G.B_norm_squared -
@@ -191,28 +191,36 @@ tuple<ld, ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, ll node,
 		B_old * B_old +
 		B_new * B_new;
 	ld C_w = G.C_w;
-
-	auto it = lower_bound(G.edges.begin(), G.edges.end(), make_tuple(node, 0, 0));
-	while (it != G.edges.end() && get<0>(*it) == node) {
-		short d, w;
-		tie(ignore, d, w) = *it;
-		if (G.node_teams[d] == old_team) {
-			C_w -= w;
-		} elif (G.node_teams[d] == new_team) {
-			C_w += w;
+	ll i = G.edge_indices[node];
+	while (i < sz(G.edges) && get<0>(G.edges[i]) == node) {
+		short target, weight;
+		tie(ignore, target, weight) = G.edges[i];
+		if (G.node_teams[target] == old_team) {
+			C_w -= weight;
+		} elif (G.node_teams[target] == new_team) {
+			C_w += weight;
 		}
-		it++;
+		i++;
 	}
-
-	// FOR (i, G.V) {
-	//	 if (G.node_teams[i] == old_team) {
-	//		 C_w -= G.weights[node][i];
-	//	 } elif (G.node_teams[i] == new_team) {
-	//		 C_w += G.weights[node][i];
-	//	 }
-	// }
-	
 	return {C_w, G.K, exp(B_EXP * sqrt(B_norm_squared)), B_norm_squared, B_old, B_new};
+}
+
+ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<ll> &nodes, vector<ll> &old_teams, vector<ll> &new_teams) {
+	ld C_w = G.C_w;
+	FORE (node, nodes) {
+		ll i = G.edge_indices[node];
+		while (i < sz(G.edges) && get<0>(G.edges[i]) == node) {
+			short target, weight;
+			tie(ignore, target, weight) = G.edges[i];
+			if (G.node_teams[target] == old_teams[node]) {
+				C_w -= weight;
+			} elif (G.node_teams[target] == new_teams[node]) {
+				C_w += weight;
+			}
+			i++;
+		}
+	}
+	return C_w;
 }
 
 void set_io(str file, str run_type = "") {
@@ -250,23 +258,27 @@ void optimized_read_input(OptimizedGraph &G) {
 	G.E = sz(data["links"]);
 	G.node_teams = vector<ll>(G.V, -1);
 	G.weights = vector<vector<ll>>(G.V, vector<ll>(G.V, 0));
+	G.edge_indices = vector<ll>(G.V, 0);
 	G.edges = vector<tuple<short, short, short>>(2 * G.E);
 	auto links = data["links"];
 	FOR (i, G.E) {
 		auto data_item = links[i];
-		auto s = data_item["source"], d = data_item["target"], w = data_item["weight"];
-		G.edges[i] = {s, d, w};
-		G.weights[s][d] = w;
-		G.weights[d][s] = w;
+		auto source = data_item["source"], target = data_item["target"], weight = data_item["weight"];
+		G.edges[i] = {source, target, weight};
+		G.weights[source][target] = weight;
+		G.weights[target][source] = weight;
 	}
-
 	FOR (i, G.E) {
-		short s, d, w;
-		tie(s, d, w) = G.edges[i];
-		G.edges[i + G.E] = {d, s, w};
+		short source, target, weight;
+		tie(source, target, weight) = G.edges[i];
+		G.edges[i + G.E] = {target, source, weight};
 	}
-
 	sort(all(G.edges));
+	FOR (i, G.V) {
+		while (G.edge_indices[i] < G.E * 2 && get<0>(G.edges[G.edge_indices[i]]) < i) {
+			G.edge_indices[i]++;
+		}
+	}
 }
 
 void read_teams(Graph &G, str file) {
@@ -445,4 +457,8 @@ ll weighted_random(vector<ld> &weights, ll range = 0) {
 	}
 	assert(false);
 	return -1;
+}
+
+void random_shuffle(vector<ll> &v) {
+	shuffle(all(v), default_random_engine(rand()));
 }
