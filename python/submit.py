@@ -3,10 +3,10 @@ from starter import tar
 
 for size in ['small', 'medium', 'large']:
     for test in range(1, 261):
-        best_file = '999999999999999_.in'
+        best_file = 'inf.in'
         for filename in os.listdir('./tests/' + size + '/' + size + str(test)):
-            if filename.endswith('.out') and int((filename.split('_')[0]).split('.')[0]) < \
-                    int((best_file.split('_')[0]).split('.')[0]):
+            if filename.endswith('.out') and float((filename.split('_')[0]).split('.')[0]) < \
+                    float((best_file.split('_')[0]).split('.')[0]):
                 best_file = filename
         file = best_file.split('.')[0]
         file = open('./tests/' + size + '/' + size + str(test) + '/' + file + '.out', 'r')

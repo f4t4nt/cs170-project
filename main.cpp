@@ -78,8 +78,8 @@ struct OptimizedGeneticController {
 		T_start = T_start0;
 		T_end = T_end0;
 		FOR (i, population_size) {
-			// population[i] = {optimized_random_assignment(G_in, team_count), T_start};
-			population[i] = {G_in, T_start};
+			population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+			// population[i] = {G_in, T_start};
 			optimized_get_score(population[i].G);
 		}
 	}
@@ -141,6 +141,7 @@ OptimizedGraph optimized_algorithm(OptimizedGraph &G_in, ll team_count, ll popul
 int main() {
 	vector<Result> results = read_queue();
 	FORE (result, results) {
+		cout << "Solving " << result.size << result.id << endl;
 		ll team_count = max_teams(result.best_score);
 		// while (team_count >= 2) {
 		// 	Graph G;
@@ -153,26 +154,26 @@ int main() {
 		// 	team_count--;
 		// }
 
-		// OptimizedGraph G;
-		// optimized_read_graph(G, result.size, result.id, "optimized");
-		// while (team_count >= 2) {
-		// 	cout << "team_count = " << team_count << endl;
-		// 	G.T = team_count;
-		// 	G.team_counts = vector<ll>(team_count, 0);
-		// 	G.B_vec = vector<ld>(team_count, 0);
-		// 	G = optimized_algorithm(G, team_count, 20, 1000, 100, 95);
-		// 	optimized_write_output(G);
-		// 	if (optimized_get_score(G) < result.best_score + 1e-3) {
-		// 		cout << "beat rank 1 " << result.best_score << " with " << optimized_get_score(G) <<
-		// 			" on " << result.size << result.id << endl;
-		// 	}
-		// 	team_count--;
-		// }
-
 		OptimizedGraph G;
-		optimized_read_best_graph(G, result.size, result.id, "optimized");
-		G = optimized_algorithm(G, team_count, 20, 1000, 10, 9.5, 10, result.best_score);
-		optimized_write_output(G);
+		optimized_read_graph(G, result.size, result.id, "optimized");
+		while (team_count >= 2) {
+			cout << "Trying " << team_count << " teams" << endl;
+			G.T = team_count;
+			G.team_counts = vector<ll>(team_count, 0);
+			G.B_vec = vector<ld>(team_count, 0);
+			G = optimized_algorithm(G, team_count, 20, 1000, 100, 95);
+			optimized_write_output(G);
+			if (optimized_get_score(G) < result.best_score + 1e-3) {
+				cout << "Found better score " << optimized_get_score(G) << ", beating " << result.best_score << endl;
+			}
+			team_count--;
+		}
+
+		// OptimizedGraph G;
+		// optimized_read_best_graph(G, result.size, result.id, "optimized");
+		// G = optimized_algorithm(G, team_count, 20, 1000, 100, 95, 10, result.best_score);
+		// optimized_write_output(G);
+		// break;
 	}
 	return 0;
 }
