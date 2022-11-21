@@ -1,4 +1,8 @@
-medium 41 6 272.8281828459045 https://170-leaderboard.vercel.app/input/medium/41
-medium 206 5 272.8281828459045 https://170-leaderboard.vercel.app/input/medium/206
-large 209 4 272.8281828459045 https://170-leaderboard.vercel.app/input/large/209
-large 113 2 272.8281828459045 https://170-leaderboard.vercel.app/input/large/113
+medium 50 2 449.5598517448982 https://170-leaderboard.vercel.app/input/medium/50
+medium 6 2 449.1689070338065 https://170-leaderboard.vercel.app/input/medium/6
+medium 98 2 449.1689070338065 https://170-leaderboard.vercel.app/input/medium/98
+large 127 2 449.5846561993482 https://170-leaderboard.vercel.app/input/large/127
+large 145 2 449.2277266951576 https://170-leaderboard.vercel.app/input/large/145
+large 191 2 449.2277266951576 https://170-leaderboard.vercel.app/input/large/191
+large 235 2 449.3977516852813 https://170-leaderboard.vercel.app/input/large/235
+large 32 2 456.2277266951576 https://170-leaderboard.vercel.app/input/large/32
