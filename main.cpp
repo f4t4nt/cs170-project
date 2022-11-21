@@ -1,5 +1,106 @@
 #include "extras.cpp"
 
+OptimizedGraph optimized_coloring_threshold(OptimizedGraph &G_in) {
+	OptimizedGraph G = G_in;
+	G.score = INF;
+	FOR (threshold, 10) {
+		OptimizedGraph G_copy = G_in;
+		FOR (i, G_copy.V) {
+			G_copy.node_teams[i] = -1;
+		}
+		vector<int> shuffled(G_copy.V);
+		iota(all(shuffled), 0);
+		shuffle(all(shuffled), default_random_engine(1000));
+		FOR (i, G_copy.V) {
+			set<short> neighbors;
+			FOR (j, G_copy.V) {
+				if (G_copy.weights[i][j] > threshold) {
+					neighbors.insert(G_copy.node_teams[j]);
+				}
+			}
+			ll team = 0;
+			vector<ll> possible_teams;
+			while (team < G_copy.T) {
+				if (neighbors.find(team) == neighbors.end()) {
+					possible_teams.pb(team);
+				}
+				team++;
+			}
+			if (possible_teams.empty()) {
+				team = G_copy.T;
+			} else {
+				team = possible_teams[0];
+				FOR (j, sz(possible_teams)) {
+					if (G_copy.team_counts[possible_teams[j]] < G_copy.team_counts[team]) {
+						team = possible_teams[j];
+					}
+				}
+			}
+			G_copy.node_teams[i] = team;
+			if (team == G_copy.T) {
+				G_copy.T++;
+				G_copy.team_counts.pb(1);
+				G_copy.B_vec.pb(0);
+			} else {
+				G_copy.team_counts[team]++;
+			}
+		}
+		optimized_get_score(G_copy);
+		if (G_copy.score < G.score) {
+			G = G_copy;
+		}
+	}
+	return G;
+}
+
+OptimizedGraph optimized_coloring_binary_bfs(OptimizedGraph &G_in) {
+	OptimizedGraph G = G_in;
+	G.score = INF;
+	OptimizedGraph G_copy = G_in;
+	FOR (threshold, MAX_WEIGHT) {
+		set<ll> uncolored;
+		queue<ll> bfs;
+		bfs.push(0);
+		G_copy.node_teams[0] = 0;
+		G_copy.team_counts[0] = 1;
+		FOB (i, 1, G_copy.V) {
+			uncolored.insert(i);
+		}
+		while (!bfs.empty()) {
+			ll node = bfs.front();
+			bfs.pop();
+			FOR (i, G_copy.V) {
+				if (G_copy.weights[node][i] > threshold && G_copy.node_teams[i] == -1) {
+					G_copy.node_teams[i] = 1 - G_copy.node_teams[node];
+					G_copy.team_counts[1 - G_copy.node_teams[node]]++;
+					bfs.push(i);
+					uncolored.erase(i);
+				}
+			}
+			if (bfs.empty() && !uncolored.empty()) {
+				bfs.push(*uncolored.begin());
+				G_copy.node_teams[*uncolored.begin()] = 1;
+				G_copy.team_counts[0]++;
+				uncolored.erase(uncolored.begin());
+			}
+		}
+		optimized_get_score(G_copy);
+		if (G_copy.score < G.score) {
+			G = G_copy;
+		}
+	}
+	return G;
+}
+
+OptimizedGraph optimized_random_assignment(OptimizedGraph &G_in, ll team_count) {
+	OptimizedGraph G = G_in;
+	FOR (i, G.V) {
+		G.node_teams[i] = rand() % team_count;
+		G.team_counts[G.node_teams[i]]++;
+	}
+	return G;
+}
+
 struct OptimizedAnnealingAgent {
 	OptimizedGraph G;
 	ld T;
@@ -60,15 +161,6 @@ struct OptimizedAnnealingAgent {
 		}
 	}
 };
-
-OptimizedGraph optimized_random_assignment(OptimizedGraph &G_in, ll team_count) {
-	OptimizedGraph G = G_in;
-	FOR (i, G.V) {
-		G.node_teams[i] = rand() % team_count;
-		G.team_counts[G.node_teams[i]]++;
-	}
-	return G;
-}
 
 struct OptimizedGeneticController {
 	vector<OptimizedAnnealingAgent> population;
@@ -142,7 +234,7 @@ int main() {
 	vector<Result> results = read_queue();
 	FORE (result, results) {
 		cout << "Solving " << result.size << result.id << endl;
-		ll team_count = max_teams(result.best_score);
+		// ll team_count = max_teams(result.best_score);
 		// while (team_count >= 2) {
 		// 	Graph G;
 		// 	read_graph(G, result.size, result.id, "focus");
@@ -154,25 +246,34 @@ int main() {
 		// 	team_count--;
 		// }
 
-		OptimizedGraph G;
-		optimized_read_graph(G, result.size, result.id, "optimized");
-		while (team_count >= 2) {
-			cout << "Trying " << team_count << " teams" << endl;
-			G.T = team_count;
-			G.team_counts = vector<ll>(team_count, 0);
-			G.B_vec = vector<ld>(team_count, 0);
-			G = optimized_algorithm(G, team_count, 20, 1000, 100, 95);
-			optimized_write_output(G);
-			if (optimized_get_score(G) < result.best_score + 1e-3) {
-				cout << "Found better score " << optimized_get_score(G) << ", beating " << result.best_score << endl;
-			}
-			team_count--;
-		}
+		// OptimizedGraph G;
+		// optimized_read_graph(G, result.size, result.id, "optimized");
+		// while (team_count >= 2) {
+		// 	cout << "Trying " << team_count << " teams" << endl;
+		// 	G.T = team_count;
+		// 	G.team_counts = vector<ll>(team_count, 0);
+		// 	G.B_vec = vector<ld>(team_count, 0);
+		// 	G = optimized_algorithm(G, team_count, 20, 1000, 100, 95);
+		// 	optimized_write_output(G);
+		// 	if (optimized_get_score(G) < result.best_score + 1e-3) {
+		// 		cout << "Found better score " << optimized_get_score(G) << ", beating " << result.best_score << endl;
+		// 	}
+		// 	team_count--;
+		// }
 
 		// OptimizedGraph G;
 		// optimized_read_best_graph(G, result.size, result.id, "optimized");
 		// G = optimized_algorithm(G, team_count, 20, 1000, 100, 95, 10, result.best_score);
 		// optimized_write_output(G);
+
+		OptimizedGraph G;
+		optimized_read_graph(G, result.size, result.id, "optimized_coloring");
+		G.T = 2;
+		G.team_counts = vector<ll>(G.T);
+		G.B_vec = vector<ld>(G.T);
+		G = optimized_coloring_binary_bfs(G);
+		optimized_write_output(G);
+
 		// break;
 	}
 	return 0;
