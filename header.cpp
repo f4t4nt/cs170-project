@@ -136,6 +136,19 @@ struct OptimizedGraph {
 	vector<short> team_counts;
 };
 
+OptimizedGraph breed(const OptimizedGraph &a, const OptimizedGraph &b) {
+	OptimizedGraph child = a;
+	FOB(i, 0, child.invariant->V) {
+		if (rand() % 2) {
+			child.team_counts[child.node_teams[i]]--;
+			child.node_teams[i] = b.node_teams[i];
+			child.team_counts[child.node_teams[i]]++;
+		}
+	}
+	child.score = INF;
+	return child;
+}
+
 struct Result {
 	str size;
 	ll id;

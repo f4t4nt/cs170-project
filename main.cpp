@@ -206,17 +206,23 @@ struct OptimizedAnnealingBatchAgent {
 	}
 };
 
-struct OptimizedGeneticController {
+struct OptimizedBlacksmithController {
 	vector<OptimizedAnnealingAgent> population;
 	ld T_start, T_end;
-	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld T_start0, ld T_end0) {
+	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld T_start0, ld T_end0, bool randomize = false) {
 		population = vector<OptimizedAnnealingAgent>(population_size);
 		T_start = T_start0;
 		T_end = T_end0;
-		FOR (i, population_size) {
-			population[i] = {optimized_random_assignment(G_in, team_count), T_start};
-			// population[i] = {G_in, T_start};
-			optimized_get_score(population[i].G);
+		if (randomize) {
+			FOR (i, population_size) {
+				population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+				optimized_get_score(population[i].G);
+			}
+		} else {
+			FOR (i, population_size) {
+				population[i] = {G_in, T_start};
+				optimized_get_score(population[i].G);
+			}
 		}
 	}
 	void step() {
@@ -247,9 +253,9 @@ struct OptimizedGeneticController {
 	}
 };
 
-OptimizedGraph optimized_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, ll stagnation_limit = 10, ld target_score = 0.0) {
+OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, ll stagnation_limit = 10, ld target_score = 0.0) {
 	OptimizedGraph G = G_in;
-	OptimizedGeneticController controller;
+	OptimizedBlacksmithController controller;
 	controller.init(G, team_count, population_size, T_start0, T_end0);
 	FOR (i, 50) {
 		controller.step();
@@ -274,7 +280,15 @@ OptimizedGraph optimized_algorithm(OptimizedGraph &G_in, ll team_count, ll popul
 	return G;
 }
 
-// OptimizedGraph optimized_randomized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generation)
+struct OptimizedShepardAgent {
+	vector<OptimizedGraph> population;
+
+};
+
+OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generation) {
+	OptimizedGraph G = G_in;
+	
+}
 
 int main() {
 	srand(time(0));
@@ -289,7 +303,7 @@ int main() {
 		while (team_count >= 2) {
 			cout << "Trying " << (ll) team_count << " teams" << endl;
 			init_teams(G, team_count);
-			G = optimized_algorithm(G, team_count, 120, 10000, 1000, 950);
+			G = optimized_annealing_algorithm(G, team_count, 120, 10000, 1000, 950);
 			optimized_write_output(G);
 			if (G.score < result.best_score + 1e-3) {
 				cout << "Found better score" << endl;
