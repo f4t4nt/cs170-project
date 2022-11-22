@@ -396,14 +396,18 @@ int main() {
 	FORE (result, results) {
 		cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
 		ch team_count = max_teams(result.best_score);
-		short population_sz = 2000 / (short) team_count;
+		short population_sz = 1000;
 		OptimizedGraph G;
 		ld previous_score = INF;
 		optimized_read_graph(G, result.size, result.id, "hyper_optimized");
 		while (team_count >= 2) {
 			cout << "Trying " << (ll) team_count << " teams" << endl;
 			init_teams(G, team_count);
-			G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950);
+			if (team_count == 2) {
+				G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 10000, 9500);
+			} else {
+				G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950);
+			}
 			optimized_write_output(G);
 			if (G.score < result.best_score + 1e-3) {
 				cout << "Found better score" << endl;
