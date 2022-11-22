@@ -258,34 +258,6 @@ struct OptimizedBlacksmithController {
 	}
 };
 
-// OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, ll stagnation_limit = 10, ld target_score = 0.0) {
-// 	OptimizedGraph G = G_in;
-// 	OptimizedBlacksmithController controller;
-// 	controller.init(G, team_count, population_size, T_start0, T_end0);
-// 	FOR (i, 50) {
-// 		controller.step();
-// 	}
-// 	ll stagnation = 0;
-// 	ld best_score = 1e18, previous_score = 1e18;
-// 	FOR (i, generations) {
-// 		controller.step_and_prune();
-// 		ld score = controller.population[0].G.score;
-// 		if (score < best_score) {
-// 			best_score = score;
-// 			G = controller.population[0].G;
-// 		}
-// 		if (i % 200 == 0) {
-// 			cout << "Generation " << i << " best score " << best_score << endl;
-// 			if (previous_score == best_score) {
-// 				break;
-// 			}
-// 			optimized_write_output(G);
-// 			previous_score = best_score;
-// 		}
-// 	}
-// 	return G;
-// }
-
 OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = false, ld target_score = 0.0, short stagnation_limit = 1, ld ignition_factor = 1.0) {
 	OptimizedGraph G = G_in;
 	G.score = INF;
@@ -319,7 +291,7 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count
 				best_score = 1e18;
 				cout << "Light em up, temperature " << blacksmith.T_start << endl;
 			}
-			if (G.score < target_score) {
+			if (G.score <= target_score) {
 				break;
 			}
 			previous_score = best_score;
@@ -396,21 +368,46 @@ struct OptimizedShepardAgent {
 	}
 };
 
-OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0) {
+OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = false, ld target_score = 0.0, short stagnation_limit = 1, ld ignition_factor = 1.0) {
 	OptimizedGraph G = G_in;
+	G.score = INF;
 	OptimizedShepardAgent shepard;
 	shepard.init(G, team_count, population_size, T_start0, T_end0);
 	FOR (i, 50) {
-		shepard.mutate();
+		shepard.step();
 	}
+	ll stagnation = 0;
+	ld best_score = 1e18, previous_score = 1e18;
 	FOR (i, generations) {
 		shepard.step();
-		ld score = shepard.population[0].G.score;
+		auto population_best = shepard.population[0].G;
+		if (population_best.score < best_score) {
+			best_score = population_best.score;
+			if (population_best.score < G.score) {
+				G = population_best;
+			}
+		}
 		if (i % 200 == 0) {
-			cout << "Generation " << i << " best score " << score << endl;
+			cout << "Generation " << i << " best score " << G.score << ", temperature " << shepard.T_start << endl;
+			optimized_write_output(G);
+			if (previous_score == best_score) {
+				stagnation++;
+				if (stagnation >= stagnation_limit) {
+					cout << "Stagnation limit reached, terminating" << endl;
+					break;
+				}
+				shepard.T_start *= ignition_factor;
+				shepard.T_end *= ignition_factor;
+				best_score = 1e18;
+				cout << "Light em up, temperature " << shepard.T_start << endl;
+			}
+			if (G.score <= target_score) {
+				break;
+			}
+			previous_score = best_score;
 		}
 	}
-	return shepard.population[0].G;
+	return G;
 }
 
 int main() {
@@ -428,8 +425,8 @@ int main() {
 			cout << "Trying " << (ll) team_count << " teams" << endl;
 			init_teams(G, team_count);
 
-			G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
-			// G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
+			// G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
+			G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
 
 			optimized_write_output(G);
 			if (G.score < result.best_score + 1e-3) {
