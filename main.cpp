@@ -1,10 +1,9 @@
 #include "extras.cpp"
 
-OptimizedGraph optimized_coloring_threshold(OptimizedGraph &G_in) {
-	OptimizedGraph G = G_in;
+OptimizedGraph optimized_coloring_threshold(OptimizedGraph G) {
 	G.score = INF;
 	FOR (threshold, 10) {
-		OptimizedGraph G_copy = G_in;
+		OptimizedGraph G_copy = G;
 		FOR (i, G_copy.invariant->V) {
 			G_copy.node_teams[i] = -1;
 		}
@@ -53,23 +52,24 @@ OptimizedGraph optimized_coloring_threshold(OptimizedGraph &G_in) {
 	return G;
 }
 
-OptimizedGraph optimized_random_assignment(OptimizedGraph &G_in, short team_count) {
-	OptimizedGraph G = G_in;
+OptimizedGraph optimized_random_assignment(OptimizedGraph G, short team_count) {
 	init_teams(G, team_count);
 	FOR (i, G.invariant->V) {
 		G.node_teams[i] = rand() % team_count;
 		G.team_counts[G.node_teams[i]]++;
 	}
+
 	return G;
 }
 
 struct OptimizedAnnealingAgent {
 	OptimizedGraph G;
 	ld T;
-	void init(OptimizedGraph &G_in, ld T0) {
+	void init(const OptimizedGraph &G_in, ld T0) {
 		G = G_in;
 		T = T0;
 	}
+
 	void step() {
 		short node = rand() % G.invariant->V;
 		ch old_team = G.node_teams[node];
@@ -283,13 +283,14 @@ int main() {
 	FORE (result, results) {
 		cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
 		ch team_count = max_teams(result.best_score);
+		short population_sz = 1000 / (short) team_count;
 		OptimizedGraph G;
 		ld previous_score = INF;
 		optimized_read_graph(G, result.size, result.id, "hyper_optimized");
 		while (team_count >= 2) {
 			cout << "Trying " << (ll) team_count << " teams" << endl;
 			init_teams(G, team_count);
-			G = optimized_algorithm(G, team_count, 120, 10000, 1000, 950);
+			G = optimized_algorithm(G, team_count, population_sz, 10000, 1000, 950);
 			optimized_write_output(G);
 			if (G.score < result.best_score + 1e-3) {
 				cout << "Found better score" << endl;
