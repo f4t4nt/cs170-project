@@ -434,9 +434,8 @@ int main() {
 				cout << "Trying " << (ll) team_count << " teams" << endl;
 				init_teams(G, team_count);
 
-			// G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
-			G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
-
+				G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
+				// G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
 				optimized_write_output(G);
 				if (G.score < result.best_score + 1e-3) {
 					cout << "Found better score" << endl;
