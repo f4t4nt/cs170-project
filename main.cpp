@@ -286,11 +286,11 @@ struct OptimizedBlacksmithController {
 // 	return G;
 // }
 
-OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = false, ld target_score = 0.0, short stagnation_limit = 1, ld ignition_factor = 1.0) {
+OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = true, ld target_score = 0.0, short stagnation_limit = 1, ld ignition_factor = 1.0) {
 	OptimizedGraph G = G_in;
 	G.score = INF;
 	OptimizedBlacksmithController blacksmith;
-	blacksmith.init(G, team_count, population_size, T_start0, T_end0);
+	blacksmith.init(G, team_count, population_size, T_start0, T_end0, randomize);
 	FOR (i, 50) {
 		blacksmith.step();
 	}
@@ -306,7 +306,7 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count
 			}
 		}
 		if (i % 200 == 0) {
-			cout << "Generation " << i << " best score " << G.score << ", temperature " << blacksmith.T_start << endl;
+			cout << "Generation " << i << " best score " << best_score << ", temperature " << blacksmith.T_start << endl;
 			optimized_write_output(G);
 			if (previous_score == best_score) {
 				stagnation++;
@@ -319,7 +319,7 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count
 				best_score = 1e18;
 				cout << "Light em up, temperature " << blacksmith.T_start << endl;
 			}
-			if (G.score < target_score) {
+			if (G.score <= target_score) {
 				break;
 			}
 			previous_score = best_score;
@@ -418,29 +418,39 @@ int main() {
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	FORE (result, results) {
-		cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
-		ch team_count = max_teams(result.best_score);
 		short population_sz = 200;
 		OptimizedGraph G;
-		ld previous_score = INF;
-		optimized_read_graph(G, result.size, result.id, "sheep");
-		while (team_count >= 2) {
-			cout << "Trying " << (ll) team_count << " teams" << endl;
-			init_teams(G, team_count);
-
-			G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
-			// G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
-
+		if (result.rank < 5) {
+			optimized_read_best_graph(G, result.size, result.id, "glassed");
+			cout << "Glassing " << result.size << result.id << ", current score " << optimized_get_score(G) << " with target score " << result.best_score << endl << endl;
+			G = optimized_annealing_algorithm(G, G.invariant->T, population_sz * 5, 4000, 100, 95, false, 0.0, 10, 10000);
 			optimized_write_output(G);
-			if (G.score < result.best_score + 1e-3) {
-				cout << "Found better score" << endl;
-			} elif (G.score > previous_score) {
-				cout << "Score increased, stopping" << endl << endl;
-				break;
+			if (G.score < result.best_score) {
+				cout << "Found better score" << endl << endl;
 			}
-			cout << endl;
-			team_count--;
-			previous_score = G.score;
+		} else {
+			cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
+			ch team_count = max_teams(result.best_score);
+			ld previous_score = INF;
+			optimized_read_graph(G, result.size, result.id, "scorched_earth");
+			while (team_count >= 2) {
+				cout << "Trying " << (ll) team_count << " teams" << endl;
+				init_teams(G, team_count);
+
+				G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
+				// G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
+
+				optimized_write_output(G);
+				if (G.score < result.best_score + 1e-3) {
+					cout << "Found better score" << endl;
+				} elif (G.score > previous_score) {
+					cout << "Score increased, stopping" << endl << endl;
+					break;
+				}
+				cout << endl;
+				team_count--;
+				previous_score = G.score;
+			}
 		}
 		auto end = chrono::high_resolution_clock::now();
 		auto duration = chrono::duration_cast<chrono::seconds>(end - start);
