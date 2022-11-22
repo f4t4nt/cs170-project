@@ -41,10 +41,11 @@ using json = nlohmann::json;
 #define sz(C) (ll) C.size()
 #define mp make_pair
 #define mt make_tuple
-#define flip(C) reverse(C.begin(), C.end())
-#define ssort(C) sort(C.begin(), C.end())
-#define rsort(C) sort(C.begin(), C.end(), greater<>())
 #define all(C) C.begin(), C.end()
+#define flip(C) reverse(all(C))
+#define ssort(C) sort(all(C))
+#define rsort(C) sort(all(C), greater<>())
+#define sshuffle(C) shuffle(all(C), default_random_engine(rand()))
 
 #define FOR(x, e) for(ll x = 0; x < (ll) e; x++)
 #define FORR(x, e) for(ll x = (ll) e - 1; x >= 0; x--)
@@ -110,13 +111,29 @@ struct Graph {
 	vector<Team> teams;
 };
 
+struct OptimizedGraphInvariant {
+	short V, E, T;
+	vector<short> edge_indices;
+	vector<tuple<short, short, short>> edges;
+	vector<vector<short>> weights;
+	OptimizedGraphInvariant(short V,
+		short E,
+		short T,
+		vector<short> edge_indices,
+		vector<tuple<short, short, short>> edges,
+		vector<vector<short>> weights) :
+		V(V), E(E), T(T), edge_indices(edge_indices), edges(edges), weights(weights) {}
+	OptimizedGraphInvariant* change_T(short new_T)const {
+		return new OptimizedGraphInvariant(V, E, new_T, edge_indices, edges, weights);
+	}
+};
+
 struct OptimizedGraph {
-	ll V, E, T;
+	const OptimizedGraphInvariant *invariant;
 	ld C_w, K, B_norm_squared, score;
 	vector<ld> B_vec;
-	vector<ll> node_teams, team_counts, edge_indices;
-	vector<tuple<short, short, short>> edges;
-	vector<vector<ll>> weights;
+	vector<ch> node_teams;
+	vector<short> team_counts;
 };
 
 struct Result {
@@ -164,7 +181,7 @@ ld get_score(Graph &G) {
 
 ld optimized_get_score(OptimizedGraph &G) {
 	G.C_w = 0;
-	FORE (edge, G.edges) {
+	FORE (edge, G.invariant->edges) {
 		short source, target, weight;
 		tie(source, target, weight) = edge;
 		if (G.node_teams[source] == G.node_teams[target]) {
@@ -172,46 +189,47 @@ ld optimized_get_score(OptimizedGraph &G) {
 		}
 	}
 	G.C_w /= 2;
-	G.K = K_COEFFICIENT * exp(K_EXP * G.T);
 	G.B_norm_squared = 0;
-	FOR (i, G.T) {
-		G.B_vec[i] = G.team_counts[i] / (ld) G.V - 1.0 / G.T;
+	FOR (i, G.invariant->T) {
+		G.B_vec[i] = G.team_counts[i] / (ld) G.invariant->V - 1.0 / G.invariant->T;
 		G.B_norm_squared += G.B_vec[i] * G.B_vec[i];
 	}
 	G.score = G.C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
 	return G.score;
 }
 
-tuple<ld, ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, ll &node, ll &old_team, ll &new_team) {
-	ld B_old = G.B_vec[old_team] - 1.0 / G.V,
-		B_new = G.B_vec[new_team] + 1.0 / G.V;
+tuple<ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, short node, ch old_team, ch new_team) {
+	ld B_old = G.B_vec[old_team] - 1.0 / G.invariant->V,
+		B_new = G.B_vec[new_team] + 1.0 / G.invariant->V;
 	ld B_norm_squared = G.B_norm_squared -
 		G.B_vec[old_team] * G.B_vec[old_team] -
 		G.B_vec[new_team] * G.B_vec[new_team] +
 		B_old * B_old +
 		B_new * B_new;
 	ld C_w = G.C_w;
-	ll i = G.edge_indices[node];
-	while (i < sz(G.edges) && get<0>(G.edges[i]) == node) {
+	short i = G.invariant->edge_indices[node], end = (node == G.invariant->V - 1 ? 2 * G.invariant->E : G.invariant->edge_indices[node + 1]);
+	auto& edges = G.invariant->edges;
+	while (i < end) {
 		short target, weight;
-		tie(ignore, target, weight) = G.edges[i];
-		if (G.node_teams[target] == old_team) {
+		tie(ignore, target, weight) = edges[i];
+		auto target_team = G.node_teams[target];
+		if (target_team == old_team) {
 			C_w -= weight;
-		} elif (G.node_teams[target] == new_team) {
+		} elif (target_team == new_team) {
 			C_w += weight;
 		}
 		i++;
 	}
-	return {C_w, G.K, exp(B_EXP * sqrt(B_norm_squared)), B_norm_squared, B_old, B_new};
+	return {C_w, exp(B_EXP * sqrt(B_norm_squared)), B_norm_squared, B_old, B_new};
 }
 
-ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<ll> &nodes, vector<ll> &old_teams, vector<ll> &new_teams) {
+ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<short> &nodes, vector<ch> &old_teams, vector<ch> &new_teams) {
 	ld C_w = G.C_w;
 	FORE (node, nodes) {
-		ll i = G.edge_indices[node];
-		while (i < sz(G.edges) && get<0>(G.edges[i]) == node) {
+		short i = G.invariant->edge_indices[node];
+		while (i < sz(G.invariant->edges) && get<0>(G.invariant->edges[i]) == node) {
 			short target, weight;
-			tie(ignore, target, weight) = G.edges[i];
+			tie(ignore, target, weight) = G.invariant->edges[i];
 			if (G.node_teams[target] == old_teams[node]) {
 				C_w -= weight;
 			} elif (G.node_teams[target] == new_teams[node]) {
@@ -254,31 +272,38 @@ void read_input(Graph &G) {
 
 void optimized_read_input(OptimizedGraph &G) {
 	json data = json::parse(fin);
-	G.V = sz(data["nodes"]);
-	G.E = sz(data["links"]);
-	G.node_teams = vector<ll>(G.V, -1);
-	G.weights = vector<vector<ll>>(G.V, vector<ll>(G.V, 0));
-	G.edge_indices = vector<ll>(G.V, 0);
-	G.edges = vector<tuple<short, short, short>>(2 * G.E);
-	auto links = data["links"];
-	FOR (i, G.E) {
-		auto data_item = links[i];
-		auto source = data_item["source"], target = data_item["target"], weight = data_item["weight"];
-		G.edges[i] = {source, target, weight};
-		G.weights[source][target] = weight;
-		G.weights[target][source] = weight;
+	auto edges_json = data["links"];
+	short V = sz(data["nodes"]),
+		E = sz(edges_json),
+		T = 0;
+	G.node_teams = vector<ch>(V, -1);
+	vector<tuple<short, short, short>> edges;
+	vector<vector<short>> weights(V, vector<short>(V, 0));
+	FORE (edge_json, edges_json) {
+		short source = edge_json["source"], target = edge_json["target"], weight = edge_json["weight"];
+		edges.pb({source, target, weight});
+		edges.pb({target, source, weight});
+		weights[source][target] = weight;
+		weights[target][source] = weight;
 	}
-	FOR (i, G.E) {
-		short source, target, weight;
-		tie(source, target, weight) = G.edges[i];
-		G.edges[i + G.E] = {target, source, weight};
-	}
-	sort(all(G.edges));
-	FOR (i, G.V) {
-		while (G.edge_indices[i] < G.E * 2 && get<0>(G.edges[G.edge_indices[i]]) < i) {
-			G.edge_indices[i]++;
+	sort(all(edges));
+	vector<short> edge_indices(V, 0);
+	FOR (i, V) {
+		while (edge_indices[i] < 2 * E && get<0>(edges[edge_indices[i]]) < i) {
+			edge_indices[i]++;
 		}
 	}
+	G.invariant = new OptimizedGraphInvariant(V, E, T, edge_indices, edges, weights);
+}
+
+void init_teams(OptimizedGraph &G, short T) {
+	G.invariant = G.invariant->change_T(T);
+	G.node_teams = vector<ch>(G.invariant->V, -1);
+	G.team_counts = vector<short>(G.invariant->T, 0);
+	G.C_w = 0.0;
+	G.K = K_COEFFICIENT * exp(K_EXP * G.invariant->T);
+	G.B_vec = vector<ld>(G.invariant->T, 0.0);
+	G.B_norm_squared = 0.0;
 }
 
 void read_teams(Graph &G, str file) {
@@ -303,17 +328,15 @@ void optimized_read_teams(OptimizedGraph &G, str file) {
 	ifstream fin(TEAM_FILE);
 	str text;
 	getline(fin, text);
-	json data = json::parse(text);
-	ll num_teams = 0;
-	FOR (i, sz(data)) {
-		num_teams = max(num_teams, (ll) data[i]);
+	json teams_json = json::parse(text);
+	short T = 0;
+	FOR (i, sz(teams_json)) {
+		T = max(T, (short) teams_json[i]);
 	}
-	G.T = num_teams;
-	G.team_counts = vector<ll>(num_teams, 0);
-	G.B_vec = vector<ld>(num_teams, 0);
-	FOR (i, sz(data)) {
-		G.node_teams[i] = data[i] - 1;
-		G.team_counts[data[i] - 1]++;
+	init_teams(G, T);
+	FOR (i, sz(teams_json)) {
+		G.node_teams[i] = (ch) (teams_json[i] - 1);
+		G.team_counts[G.node_teams[i]]++;
 	}
 }
 
@@ -432,14 +455,14 @@ void optimized_write_output(OptimizedGraph &G) {
 	}
 	ofstream fout(OUT_FILE);
 	fout << "[" << G.node_teams[0] + 1;
-	FOB (i, 1, G.V) {
+	FOB (i, 1, G.invariant->V) {
 		fout << ", " << G.node_teams[i] + 1;
 	}
 	fout << "]" << endl;
 }
 
-ll max_teams(ld score) {
-	return (ll) floor(log(score / K_COEFFICIENT) / K_EXP);
+ch max_teams(ld score) {
+	return (ch) floor(log(score / K_COEFFICIENT) / K_EXP);
 }
 
 ll weighted_random(vector<ld> &weights, ll range = 0) {
@@ -457,8 +480,4 @@ ll weighted_random(vector<ld> &weights, ll range = 0) {
 	}
 	assert(false);
 	return -1;
-}
-
-void random_shuffle(vector<ll> &v) {
-	shuffle(all(v), default_random_engine(rand()));
 }

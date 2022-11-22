@@ -5,29 +5,29 @@ OptimizedGraph optimized_coloring_threshold(OptimizedGraph &G_in) {
 	G.score = INF;
 	FOR (threshold, 10) {
 		OptimizedGraph G_copy = G_in;
-		FOR (i, G_copy.V) {
+		FOR (i, G_copy.invariant->V) {
 			G_copy.node_teams[i] = -1;
 		}
-		vector<ll> shuffled(G_copy.V);
+		vector<ll> shuffled(G_copy.invariant->V);
 		iota(all(shuffled), 0);
-		random_shuffle(shuffled);
-		FOR (i, G_copy.V) {
+		sshuffle(shuffled);
+		FOR (i, G_copy.invariant->V) {
 			set<short> neighbors;
-			FOR (j, G_copy.V) {
-				if (G_copy.weights[i][j] > threshold) {
+			FOR (j, G_copy.invariant->V) {
+				if (G_copy.invariant->weights[i][j] > threshold) {
 					neighbors.insert(G_copy.node_teams[j]);
 				}
 			}
 			ll team = 0;
 			vector<ll> possible_teams;
-			while (team < G_copy.T) {
+			while (team < G_copy.invariant->T) {
 				if (neighbors.find(team) == neighbors.end()) {
 					possible_teams.pb(team);
 				}
 				team++;
 			}
 			if (possible_teams.empty()) {
-				team = G_copy.T;
+				team = G_copy.invariant->T;
 			} else {
 				team = possible_teams[0];
 				FOR (j, sz(possible_teams)) {
@@ -37,8 +37,8 @@ OptimizedGraph optimized_coloring_threshold(OptimizedGraph &G_in) {
 				}
 			}
 			G_copy.node_teams[i] = team;
-			if (team == G_copy.T) {
-				G_copy.T++;
+			if (team == G_copy.invariant->T) {
+				G_copy.invariant = G_copy.invariant->change_T(G_copy.invariant->T + 1);
 				G_copy.team_counts.pb(1);
 				G_copy.B_vec.pb(0);
 			} else {
@@ -53,12 +53,10 @@ OptimizedGraph optimized_coloring_threshold(OptimizedGraph &G_in) {
 	return G;
 }
 
-OptimizedGraph optimized_random_assignment(OptimizedGraph &G_in, ll team_count) {
+OptimizedGraph optimized_random_assignment(OptimizedGraph &G_in, short team_count) {
 	OptimizedGraph G = G_in;
-	G.T = team_count;
-	G.team_counts = vector<ll>(team_count, 0);
-	G.B_vec = vector<ld>(team_count, 0);
-	FOR (i, G.V) {
+	init_teams(G, team_count);
+	FOR (i, G.invariant->V) {
 		G.node_teams[i] = rand() % team_count;
 		G.team_counts[G.node_teams[i]]++;
 	}
@@ -73,31 +71,15 @@ struct OptimizedAnnealingAgent {
 		T = T0;
 	}
 	void step() {
-		ll node = rand() % (ll) G.V;
-		ll old_team = G.node_teams[node];
-		ll new_team = rand() % (ll) G.T;
+		short node = rand() % G.invariant->V;
+		ch old_team = G.node_teams[node];
+		ch new_team = rand() % G.invariant->T;
 		while (new_team == old_team) {
-			new_team = rand() % (ll) G.T;
+			new_team = rand() % G.invariant->T;
 		}
-		ld C_w, K, B, B_norm_squared, B_old, B_new;
-		tie(C_w, K, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
-		ld new_score = C_w + K + B;
-		// G.node_teams[node] = new_team;
-		// G.team_counts[old_team]--;
-		// G.team_counts[new_team]++;
-		// ld test_score = optimized_get_score(G);
-		// if (abs(new_score - test_score) >= 1e-6) {
-		// 	cout << "ERROR: " << new_score << " " << test_score << endl;
-		// 	cout << "C_w: " << C_w << " " << G.C_w << endl;
-		// 	cout << "K: " << K << " " << G.K << endl;
-		// 	cout << "B: " << B << " " << exp(B_EXP * sqrt(B_norm_squared)) << endl;
-		// 	cout << "B_norm_squared: " << B_norm_squared << " " << G.B_norm_squared << endl;
-		// 	optimized_get_score(G, node);
-		// 	assert(false);
-		// }
-		// G.node_teams[node] = old_team;
-		// G.team_counts[old_team]++;
-		// G.team_counts[new_team]--;
+		ld C_w, B, B_norm_squared, B_old, B_new;
+		tie(C_w, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
+		ld new_score = C_w + G.K + B;
 		if (new_score < G.score) {
 			G.node_teams[node] = new_team;
 			G.team_counts[old_team]--;
@@ -106,7 +88,6 @@ struct OptimizedAnnealingAgent {
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
 			G.C_w = C_w;
-			G.K = K;
 			G.B_norm_squared = B_norm_squared;
 			return;
 		}
@@ -119,7 +100,6 @@ struct OptimizedAnnealingAgent {
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
 			G.C_w = C_w;
-			G.K = K;
 			G.B_norm_squared = B_norm_squared;
 			return;
 		}
@@ -134,15 +114,15 @@ struct OptimizedAnnealingBatchAgent {
 		T = T0;
 	}
 	void stepSingle() {
-		ll node = rand() % (ll) G.V;
-		ll old_team = G.node_teams[node];
-		ll new_team = rand() % (ll) G.T;
+		short node = rand() % (ll) G.invariant->V;
+		ch old_team = G.node_teams[node];
+		ch new_team = rand() % (ll) G.invariant->T;
 		while (new_team == old_team) {
-			new_team = rand() % (ll) G.T;
+			new_team = rand() % (ll) G.invariant->T;
 		}
-		ld C_w, K, B, B_norm_squared, B_old, B_new;
-		tie(C_w, K, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
-		ld new_score = C_w + K + B;
+		ld C_w, B, B_norm_squared, B_old, B_new;
+		tie(C_w, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
+		ld new_score = C_w + G.K + B;
 		if (new_score < G.score) {
 			G.node_teams[node] = new_team;
 			G.team_counts[old_team]--;
@@ -151,7 +131,6 @@ struct OptimizedAnnealingBatchAgent {
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
 			G.C_w = C_w;
-			G.K = K;
 			G.B_norm_squared = B_norm_squared;
 			return;
 		}
@@ -164,7 +143,6 @@ struct OptimizedAnnealingBatchAgent {
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
 			G.C_w = C_w;
-			G.K = K;
 			G.B_norm_squared = B_norm_squared;
 			return;
 		}
@@ -176,32 +154,33 @@ struct OptimizedAnnealingBatchAgent {
 			stepSingle();
 			return;
 		}
-		ll team_count = 0;
-		vector<ll> team_pick_node(G.T, -1);
+		ch team_count = 0;
+		vector<short> team_pick_node(G.invariant->T, -1);
 		while (team_count < batch_size) {
-			ll team = rand() % (ll) G.T;
+			ch team = rand() % (ch) G.invariant->T;
 			if (team_pick_node[team] == -1) {
 				continue;
 			}
 			team_pick_node[team] = 1;
 			team_count++;
 		}
-		FOR (i, G.T) {
-			if (team_pick_node[i]) {
-				team_pick_node[i] = rand() % (ll) G.team_counts[i];
+		FOR (i, G.invariant->T) {
+			if (team_pick_node[i] == 1) {
+				team_pick_node[i] = rand() % (short) G.team_counts[i];
 			}
 		}
-		vector<ll> nodes, old_teams;
-		FOR (i, G.V) {
+		vector<short> nodes;
+		vector<ch> old_teams;
+		FOR (i, G.invariant->V) {
 			if (team_pick_node[G.node_teams[i]] == 0) {
-				nodes.push_back(i);
-				old_teams.push_back(G.node_teams[i]);
+				nodes.pb(i);
+				old_teams.pb(G.node_teams[i]);
 			}
 			team_pick_node[G.node_teams[i]]--;
 		}
-		assert(nodes.size() == batch_size);
-		vector<ll> new_teams = old_teams;
-		random_shuffle(new_teams);
+		assert(sz(nodes) == batch_size);
+		vector<ch> new_teams = old_teams;
+		sshuffle(new_teams);
 		ld C_w = optimized_update_score_batch_swaps(G, nodes, old_teams, new_teams);
 		if (C_w < G.C_w) {
 			FOR (i, batch_size) {
@@ -283,9 +262,6 @@ OptimizedGraph optimized_algorithm(OptimizedGraph &G_in, ll team_count, ll popul
 		if (score < best_score) {
 			best_score = score;
 			G = controller.population[0].G;
-			if (best_score < target_score + 1e-3) {
-				break;
-			}
 		}
 		if (i % 200 == 0) {
 			cout << "Generation " << i << " best score " << best_score << endl;
@@ -303,28 +279,16 @@ OptimizedGraph optimized_algorithm(OptimizedGraph &G_in, ll team_count, ll popul
 int main() {
 	srand(time(0));
 	vector<Result> results = read_queue();
+	auto start = chrono::high_resolution_clock::now();
 	FORE (result, results) {
 		cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
-		ll team_count = max_teams(result.best_score);
-		// while (team_count >= 2) {
-		// 	Graph G;
-		// 	read_graph(G, result.size, result.id, "focus");
-		// 	G = genetic_algorithm(G, team_count, 20, 300, 0.1, result.best_score);
-		// 	write_output(G);
-		// 	if (get_score(G) < result.best_score) {
-		// 		break;
-		// 	}
-		// 	team_count--;
-		// }
-
+		ch team_count = max_teams(result.best_score);
 		OptimizedGraph G;
 		ld previous_score = INF;
-		optimized_read_graph(G, result.size, result.id, "optimized");
+		optimized_read_graph(G, result.size, result.id, "hyper_optimized");
 		while (team_count >= 2) {
-			cout << "Trying " << team_count << " teams" << endl;
-			G.T = team_count;
-			G.team_counts = vector<ll>(team_count, 0);
-			G.B_vec = vector<ld>(team_count, 0);
+			cout << "Trying " << (ll) team_count << " teams" << endl;
+			init_teams(G, team_count);
 			G = optimized_algorithm(G, team_count, 120, 10000, 1000, 950);
 			optimized_write_output(G);
 			if (G.score < result.best_score + 1e-3) {
@@ -337,24 +301,9 @@ int main() {
 			team_count--;
 			previous_score = G.score;
 		}
-
-		// OptimizedGraph G;
-		// optimized_read_best_graph(G, result.size, result.id, "worst_fixed");
-		// G = optimized_algorithm(G, team_count, 100, 500, 10, 9.5, 10, result.best_score);
-		// optimized_write_output(G);
-		// if (G.score < result.best_score + 1e-3) {
-		// 	cout << "Found better score " << G.score << ", beating " << result.best_score << endl;
-		// }
-
-		// OptimizedGraph G;
-		// optimized_read_graph(G, result.size, result.id, "optimized_coloring");
-		// G.T = 2;
-		// G.team_counts = vector<ll>(G.T);
-		// G.B_vec = vector<ld>(G.T);
-		// G = optimized_coloring_threshold(G);
-		// optimized_write_output(G);
-
-		// break;
+		auto end = chrono::high_resolution_clock::now();
+		auto duration = chrono::duration_cast<chrono::seconds>(end - start);
+		cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
 	}
 	return 0;
 }
