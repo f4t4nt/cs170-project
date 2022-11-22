@@ -5,12 +5,13 @@
 #include <deque>
 #include <fstream>
 #include <functional>
-#include <iostream>
 #include <iomanip>
+#include <iostream>
 #include <iterator>
 #include <list>
 #include <map>
 #include <math.h>
+#include <memory>
 #include <numeric>
 #include <queue>
 #include <random>
@@ -18,8 +19,8 @@
 #include <sstream>
 #include <stack>
 #include <stdio.h>
-#include <string>
 #include <string.h>
+#include <string>
 #include <tuple>
 #include <unordered_set>
 #include <utility>
@@ -123,13 +124,14 @@ struct OptimizedGraphInvariant {
 		vector<tuple<short, short, short>> edges,
 		vector<vector<short>> weights) :
 		V(V), E(E), T(T), edge_indices(edge_indices), edges(edges), weights(weights) {}
-	OptimizedGraphInvariant* change_T(short new_T)const {
-		return new OptimizedGraphInvariant(V, E, new_T, edge_indices, edges, weights);
+
+	shared_ptr<const OptimizedGraphInvariant> change_T(short new_T)const {
+		return make_shared<const OptimizedGraphInvariant>(OptimizedGraphInvariant(V, E, new_T, edge_indices, edges, weights));
 	}
 };
 
 struct OptimizedGraph {
-	const OptimizedGraphInvariant *invariant;
+	shared_ptr<const OptimizedGraphInvariant> invariant;
 	ld C_w, K, B_norm_squared, score;
 	vector<ld> B_vec;
 	vector<ch> node_teams;
@@ -306,11 +308,12 @@ void optimized_read_input(OptimizedGraph &G) {
 			edge_indices[i]++;
 		}
 	}
-	G.invariant = new OptimizedGraphInvariant(V, E, T, edge_indices, edges, weights);
+	G.invariant = make_shared<const OptimizedGraphInvariant>(OptimizedGraphInvariant(V, E, T, edge_indices, edges, weights));
 }
 
 void init_teams(OptimizedGraph &G, short T) {
-	G.invariant = G.invariant->change_T(T);
+	auto last_invariant = G.invariant;
+	G.invariant = last_invariant->change_T(T);
 	G.node_teams = vector<ch>(G.invariant->V, -1);
 	G.team_counts = vector<short>(G.invariant->T, 0);
 	G.C_w = 0.0;
