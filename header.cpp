@@ -256,7 +256,7 @@ void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
 			a.team_counts[a.node_teams[i]]++;
 		}
 	}
-	a.score = optimized_get_score(a);
+	optimized_get_score(a);
 }
 
 void set_io(str file, str run_type = "") {

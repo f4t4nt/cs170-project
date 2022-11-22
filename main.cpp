@@ -323,12 +323,12 @@ struct OptimizedShepardAgent {
 	}
 	void mutate() {
 		auto population_size = sz(population);
-		// #pragma omp parallel for
+		#pragma omp parallel for
 		for (size_t i = 0; i < population_size; i++) {
 			auto &agent = population[i];
 			agent.T = T_start;
 			while (agent.T > T_end) {
-				FOR (j, 100) {
+				FOR (j, 1000) {
 					agent.step();
 				}
 				agent.T *= 0.999;
@@ -339,17 +339,16 @@ struct OptimizedShepardAgent {
 	}
 	void cross() {
 		auto population_size = sz(population);
-		// #pragma omp parallel for collapse(2)
-		FOR (i, population_size) {
-			FOR (j, population_size) {
-				children[i * population_size + j] = population[i].G;
-				optimized_cross(children[i * population_size + j], population[j].G);
-			}
+		#pragma omp parallel for
+		FOR (i, population_size * population_size) {
+			ll a = i / population_size, b = i % population_size;
+			children[i] = population[a].G;
+			optimized_cross(children[i], population[b].G);
 		}
 	}
 	void step() {
-		mutate();
 		cross();
+		mutate();
 		sort(all(children), [](OptimizedGraph &a, OptimizedGraph &b) {
 			return a.score < b.score;
 		});
@@ -358,7 +357,7 @@ struct OptimizedShepardAgent {
 		});
 		ll j = 0;
 		FORR (i, sz(population)) {
-			if (population[i].G.score > children[j].score) {
+			if (j < sz(children) && population[i].G.score > children[j].score) {
 				population[i].G = children[j];
 				j++;
 			} else {
@@ -415,9 +414,9 @@ int main() {
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	FORE (result, results) {
-		short population_sz = 200;
+		short population_sz = 20;
 		OptimizedGraph G;
-		if (result.rank < 5) {
+		if (false) {
 			optimized_read_best_graph(G, result.size, result.id, "glassed");
 			cout << "Glassing " << result.size << result.id << ", current score " << optimized_get_score(G) << " with target score " << result.best_score << endl << endl;
 			G = optimized_annealing_algorithm(G, G.invariant->T, population_sz * 5, 4000, 100, 95, false, 0.0, 10, 10000);
@@ -429,13 +428,13 @@ int main() {
 			cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
 			ch team_count = max_teams(result.best_score);
 			ld previous_score = INF;
-			optimized_read_graph(G, result.size, result.id, "scorched_earth");
+			optimized_read_graph(G, result.size, result.id, "sheep");
 			while (team_count >= 2) {
 				cout << "Trying " << (ll) team_count << " teams" << endl;
 				init_teams(G, team_count);
 
-				G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
-				// G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
+				// G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
+				G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
 				optimized_write_output(G);
 				if (G.score < result.best_score + 1e-3) {
 					cout << "Found better score" << endl;
