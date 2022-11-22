@@ -209,7 +209,7 @@ tuple<ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, short node, 
 		B_new * B_new;
 	ld C_w = G.C_w;
 	short i = G.invariant->edge_indices[node], end = (node == G.invariant->V - 1 ? 2 * G.invariant->E : G.invariant->edge_indices[node + 1]);
-	auto& edges = G.invariant->edges;
+	auto &edges = G.invariant->edges;
 	while (i < end) {
 		short target, weight;
 		tie(ignore, target, weight) = edges[i];
@@ -226,17 +226,23 @@ tuple<ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, short node, 
 
 ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<short> &nodes, vector<ch> &old_teams, vector<ch> &new_teams) {
 	ld C_w = G.C_w;
-	FORE (node, nodes) {
-		short i = G.invariant->edge_indices[node];
-		while (i < sz(G.invariant->edges) && get<0>(G.invariant->edges[i]) == node) {
-			short target, weight;
-			tie(ignore, target, weight) = G.invariant->edges[i];
-			if (G.node_teams[target] == old_teams[node]) {
-				C_w -= weight;
-			} elif (G.node_teams[target] == new_teams[node]) {
-				C_w += weight;
+	auto &edges = G.invariant->edges;
+	FOR (j, sz(nodes)) {
+		ch old_team = old_teams[j], new_team = new_teams[j];
+		if (old_team != new_team) {
+			short node = nodes[j];
+			short i = G.invariant->edge_indices[node], end = (node == G.invariant->V - 1 ? 2 * G.invariant->E : G.invariant->edge_indices[node + 1]);
+			while (i < end) {
+				short target, weight;
+				tie(ignore, target, weight) = edges[i];
+				auto target_team = G.node_teams[target];
+				if (target_team == old_team) {
+					C_w -= weight;
+				} elif (target_team == new_team) {
+					C_w += weight;
+				}
+				i++;
 			}
-			i++;
 		}
 	}
 	return C_w;

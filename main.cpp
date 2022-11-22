@@ -154,13 +154,17 @@ struct OptimizedAnnealingBatchAgent {
 		}
 		ch team_count = 0;
 		vector<short> team_pick_node(G.invariant->T, -1);
-		while (team_count < batch_size) {
-			ch team = rand() % (ch) G.invariant->T;
-			if (team_pick_node[team] == -1) {
-				continue;
+		if (team_count >= G.invariant->T) {
+			team_pick_node = vector<short>(G.invariant->T, 1);
+		} else {
+			while (team_count < batch_size) {
+				ch team = rand() % (ch) G.invariant->T;
+				if (team_pick_node[team] == 1) {
+					continue;
+				}
+				team_pick_node[team] = 1;
+				team_count++;
 			}
-			team_pick_node[team] = 1;
-			team_count++;
 		}
 		FOR (i, G.invariant->T) {
 			if (team_pick_node[i] == 1) {
@@ -182,23 +186,27 @@ struct OptimizedAnnealingBatchAgent {
 		ld C_w = optimized_update_score_batch_swaps(G, nodes, old_teams, new_teams);
 		if (C_w < G.C_w) {
 			FOR (i, batch_size) {
-				G.node_teams[nodes[i]] = new_teams[i];
-				G.team_counts[old_teams[i]]--;
-				G.team_counts[new_teams[i]]++;
+				if (old_teams[i] != new_teams[i]) {
+					G.node_teams[nodes[i]] = new_teams[i];
+					G.team_counts[old_teams[i]]--;
+					G.team_counts[new_teams[i]]++;
+				}
 			}
 			G.C_w = C_w;
-			G.score = C_w + G.K + G.B_norm_squared;
+			G.score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
 			return;
 		}
 		ld p = exp((G.C_w - C_w) / T);
 		if (rand() % 1000000 < p * 1000000) {
 			FOR (i, batch_size) {
-				G.node_teams[nodes[i]] = new_teams[i];
-				G.team_counts[old_teams[i]]--;
-				G.team_counts[new_teams[i]]++;
+				if (old_teams[i] != new_teams[i]) {
+					G.node_teams[nodes[i]] = new_teams[i];
+					G.team_counts[old_teams[i]]--;
+					G.team_counts[new_teams[i]]++;
+				}
 			}
 			G.C_w = C_w;
-			G.score = C_w + G.K + G.B_norm_squared;
+			G.score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
 			return;
 		}
 	}
@@ -250,25 +258,68 @@ struct OptimizedBlacksmithController {
 	}
 };
 
-OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, ll stagnation_limit = 10, ld target_score = 0.0) {
+// OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, ll stagnation_limit = 10, ld target_score = 0.0) {
+// 	OptimizedGraph G = G_in;
+// 	OptimizedBlacksmithController controller;
+// 	controller.init(G, team_count, population_size, T_start0, T_end0);
+// 	FOR (i, 50) {
+// 		controller.step();
+// 	}
+// 	ll stagnation = 0;
+// 	ld best_score = 1e18, previous_score = 1e18;
+// 	FOR (i, generations) {
+// 		controller.step_and_prune();
+// 		ld score = controller.population[0].G.score;
+// 		if (score < best_score) {
+// 			best_score = score;
+// 			G = controller.population[0].G;
+// 		}
+// 		if (i % 200 == 0) {
+// 			cout << "Generation " << i << " best score " << best_score << endl;
+// 			if (previous_score == best_score) {
+// 				break;
+// 			}
+// 			optimized_write_output(G);
+// 			previous_score = best_score;
+// 		}
+// 	}
+// 	return G;
+// }
+
+OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = false, ld target_score = 0.0, short stagnation_limit = 1, ld ignition_factor = 1.0) {
 	OptimizedGraph G = G_in;
-	OptimizedBlacksmithController controller;
-	controller.init(G, team_count, population_size, T_start0, T_end0);
+	G.score = INF;
+	OptimizedBlacksmithController blacksmith;
+	blacksmith.init(G, team_count, population_size, T_start0, T_end0);
 	FOR (i, 50) {
-		controller.step();
+		blacksmith.step();
 	}
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
 	FOR (i, generations) {
-		controller.step_and_prune();
-		ld score = controller.population[0].G.score;
-		if (score < best_score) {
-			best_score = score;
-			G = controller.population[0].G;
+		blacksmith.step_and_prune();
+		auto population_best = blacksmith.population[0].G;
+		if (population_best.score < best_score) {
+			best_score = population_best.score;
+			if (population_best.score < G.score) {
+				G = population_best;
+			}
 		}
 		if (i % 200 == 0) {
-			cout << "Generation " << i << " best score " << best_score << endl;
-			if (abs(previous_score - best_score) < 0.1) {
+			cout << "Generation " << i << " best score " << G.score << ", temperature " << blacksmith.T_start << endl;
+			optimized_write_output(G);
+			if (previous_score == best_score) {
+				stagnation++;
+				if (stagnation >= stagnation_limit) {
+					cout << "Stagnation limit reached, terminating" << endl;
+					break;
+				}
+				blacksmith.T_start *= ignition_factor;
+				blacksmith.T_end *= ignition_factor;
+				best_score = 1e18;
+				cout << "Light em up, temperature " << blacksmith.T_start << endl;
+			}
+			if (G.score < target_score) {
 				break;
 			}
 			previous_score = best_score;
@@ -276,33 +327,6 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count
 	}
 	return G;
 }
-
-// OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0) {
-// 	OptimizedGraph G = G_in;
-// 	G.score = INF;
-// 	OptimizedBlacksmithController blacksmith;
-// 	blacksmith.init(G, team_count, population_size, T_start0, T_end0);
-// 	FOR (i, 50) {
-// 		blacksmith.step();
-// 	}
-// 	ll stagnation = 0;
-// 	ld previous_score = 1e18;
-// 	FOR (i, generations) {
-// 		blacksmith.step_and_prune();
-// 		auto population_best = blacksmith.population[0].G;
-// 		if (population_best.score < G.score) {
-// 			G = population_best;
-// 		}
-// 		if (i % 200 == 0) {
-// 			cout << "Generation " << i << " best score " << G.score << endl;
-// 			if (abs(previous_score - G.score) < 0.1) {
-// 				break;
-// 			}
-// 			previous_score = G.score;
-// 		}
-// 	}
-// 	return G;
-// }
 
 struct OptimizedShepardAgent {
 	vector<OptimizedAnnealingAgent> population;
@@ -327,7 +351,7 @@ struct OptimizedShepardAgent {
 	}
 	void mutate() {
 		auto population_size = sz(population);
-		#pragma omp parallel for
+		// #pragma omp parallel for
 		for (size_t i = 0; i < population_size; i++) {
 			auto &agent = population[i];
 			agent.T = T_start;
@@ -343,7 +367,7 @@ struct OptimizedShepardAgent {
 	}
 	void cross() {
 		auto population_size = sz(population);
-		#pragma omp parallel for collapse(2)
+		// #pragma omp parallel for collapse(2)
 		FOR (i, population_size) {
 			FOR (j, population_size) {
 				children[i * population_size + j] = population[i].G;
@@ -390,20 +414,23 @@ OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, 
 }
 
 int main() {
-	srand(time(0));
+	srand(time(NULL));
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	FORE (result, results) {
 		cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
 		ch team_count = max_teams(result.best_score);
-		short population_sz = 2000 / (short) team_count;
+		short population_sz = 200;
 		OptimizedGraph G;
 		ld previous_score = INF;
-		optimized_read_graph(G, result.size, result.id, "hyper_optimized");
+		optimized_read_graph(G, result.size, result.id, "sheep");
 		while (team_count >= 2) {
 			cout << "Trying " << (ll) team_count << " teams" << endl;
 			init_teams(G, team_count);
-			G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950);
+
+			G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
+			// G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950);
+
 			optimized_write_output(G);
 			if (G.score < result.best_score + 1e-3) {
 				cout << "Found better score" << endl;
