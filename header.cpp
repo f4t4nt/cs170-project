@@ -124,7 +124,6 @@ struct OptimizedGraphInvariant {
 		vector<tuple<short, short, short>> edges,
 		vector<vector<short>> weights) :
 		V(V), E(E), T(T), edge_indices(edge_indices), edges(edges), weights(weights) {}
-
 	shared_ptr<const OptimizedGraphInvariant> change_T(short new_T)const {
 		return make_shared<const OptimizedGraphInvariant>(OptimizedGraphInvariant(V, E, new_T, edge_indices, edges, weights));
 	}
@@ -137,19 +136,6 @@ struct OptimizedGraph {
 	vector<ch> node_teams;
 	vector<short> team_counts;
 };
-
-OptimizedGraph breed(const OptimizedGraph &a, const OptimizedGraph &b) {
-	OptimizedGraph child = a;
-	FOB(i, 0, child.invariant->V) {
-		if (rand() % 2) {
-			child.team_counts[child.node_teams[i]]--;
-			child.node_teams[i] = b.node_teams[i];
-			child.team_counts[child.node_teams[i]]++;
-		}
-	}
-	child.score = INF;
-	return child;
-}
 
 struct Result {
 	str size;
@@ -254,6 +240,17 @@ ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<short> &nodes, v
 		}
 	}
 	return C_w;
+}
+
+void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
+	FOB(i, 0, a.invariant->V) {
+		if (rand() % 2) {
+			a.team_counts[a.node_teams[i]]--;
+			a.node_teams[i] = b.node_teams[i];
+			a.team_counts[a.node_teams[i]]++;
+		}
+	}
+	a.score = optimized_get_score(a);
 }
 
 void set_io(str file, str run_type = "") {
