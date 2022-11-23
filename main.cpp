@@ -278,8 +278,11 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count
 			}
 		}
 		if (i % 200 == 0) {
-			cout << "Generation " << i << " best score " << best_score << ", temperature " << blacksmith.T_start << endl;
+			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << blacksmith.T_start << endl;
 			optimized_write_output(G);
+			if (blacksmith.T_start < 1e-3) {
+				break;
+			}
 			if (previous_score == best_score) {
 				stagnation++;
 				if (stagnation >= stagnation_limit) {
@@ -289,7 +292,7 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G_in, ll team_count
 				blacksmith.T_start *= ignition_factor;
 				blacksmith.T_end *= ignition_factor;
 				best_score = 1e18;
-				cout << "Light em up, temperature " << blacksmith.T_start << endl;
+				cout << "Reigniting, temperature set to " << blacksmith.T_start << endl;
 			}
 			if (G.score <= target_score) {
 				break;
@@ -387,7 +390,7 @@ OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, 
 			}
 		}
 		if (i % 200 == 0) {
-			cout << "Generation " << i << " best score " << G.score << ", temperature " << shepard.T_start << endl;
+			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
 			optimized_write_output(G);
 			if (previous_score == best_score) {
 				stagnation++;
@@ -398,7 +401,7 @@ OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, 
 				shepard.T_start *= ignition_factor;
 				shepard.T_end *= ignition_factor;
 				best_score = 1e18;
-				cout << "Light em up, temperature " << shepard.T_start << endl;
+				cout << "Reigniting, temperature set to " << shepard.T_start << endl;
 			}
 			if (G.score <= target_score) {
 				break;
@@ -414,15 +417,15 @@ int main() {
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	FORE (result, results) {
-		short population_sz = 20;
+		short population_sz = 256;
 		OptimizedGraph G;
-		if (false) {
-			optimized_read_best_graph(G, result.size, result.id, "glassed");
-			cout << "Glassing " << result.size << result.id << ", current score " << optimized_get_score(G) << " with target score " << result.best_score << endl << endl;
-			G = optimized_annealing_algorithm(G, G.invariant->T, population_sz * 5, 4000, 100, 95, false, 0.0, 10, 10000);
+		if (true) {
+			optimized_read_best_graph(G, result.size, result.id, "insurance");
+			cout << "Insuring " << result.size << result.id << ", current score " << optimized_get_score(G) << endl << endl;
+			G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 4000, 100, 95, false, 0.0, result.rank, 1000);
 			optimized_write_output(G);
 			if (G.score < result.best_score) {
-				cout << "Found better score" << endl << endl;
+				cout << "Found better score" << endl;
 			}
 		} else {
 			cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
