@@ -141,10 +141,12 @@ struct Result {
 	str size;
 	ll id;
 	ll rank;
-	ld score;
 	ld best_score;
-	str path;
+	ld submission_score;
+	ld local_score;
+	str local_file;
 	str url;
+	str notes;
 };
 
 tuple<ld, ld, ld> score_separated(Graph &G) {
@@ -433,15 +435,21 @@ vector<Result> read_queue() {
 	str line;
 	while (getline(fin, line)) {
 		stringstream ss(line);
-		str size, id, rank, best_score, url;
-		ss >> size >> id >> rank >> best_score >> url;
-		results.pb({size, 
-			stoll(id),
-			stoll(rank),
-			get_own_score(size, id),
-			stold(best_score),
-			"tests/" + size + "/" + size + id + "/",
-			url});
+		ll id, rank;
+		ld best_score, submission_score, local_score;
+		str size, local_file, url, notes;
+		ss >> size >> id >> rank >> best_score >> submission_score >> local_score >> local_file >> url >> notes;
+		results.pb({
+			size,
+			id,
+			rank,
+			best_score,
+			submission_score,
+			local_score,
+			local_file,
+			url,
+			notes
+		});
 	}
 	return results;
 }

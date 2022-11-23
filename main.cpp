@@ -422,39 +422,39 @@ int main() {
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	FORE (result, results) {
-		short population_sz = 256;
-		OptimizedGraph G;
-		if (true) {
-			optimized_read_best_graph(G, result.size, result.id, "insurance");
-			cout << "Insuring " << result.size << result.id << ", current score " << optimized_get_score(G) << endl << endl;
-			G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 4000, 100, 95, false, 0.0, result.rank, 1000);
-			optimized_write_output(G);
-			if (G.score < result.best_score) {
-				cout << "Found better score" << endl;
-			}
-		} else {
-			cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
-			ch team_count = max_teams(result.best_score);
-			ld previous_score = INF;
-			optimized_read_graph(G, result.size, result.id, "sheep");
-			while (team_count >= 2) {
-				cout << "Trying " << (ll) team_count << " teams" << endl;
-				init_teams(G, team_count);
+		// short population_sz = 256;
+		// OptimizedGraph G;
+		// if (true) {
+		// 	optimized_read_best_graph(G, result.size, result.id, "insurance");
+		// 	cout << "Insuring " << result.size << result.id << ", current score " << optimized_get_score(G) << endl << endl;
+		// 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 4000, 100, 95, false, 0.0, result.rank, 1000);
+		// 	optimized_write_output(G);
+		// 	if (G.score < result.best_score) {
+		// 		cout << "Found better score" << endl;
+		// 	}
+		// } else {
+		// 	cout << "Solving " << result.size << result.id << " with target score " << result.best_score << endl << endl;
+		// 	ch team_count = max_teams(result.best_score);
+		// 	ld previous_score = INF;
+		// 	optimized_read_graph(G, result.size, result.id, "sheep");
+		// 	while (team_count >= 2) {
+		// 		cout << "Trying " << (ll) team_count << " teams" << endl;
+		// 		init_teams(G, team_count);
 
-				// G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
-				G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
-				optimized_write_output(G);
-				if (G.score < result.best_score + 1e-3) {
-					cout << "Found better score" << endl;
-				} elif (G.score > previous_score) {
-					cout << "Score increased, stopping" << endl << endl;
-					break;
-				}
-				cout << endl;
-				team_count--;
-				previous_score = G.score;
-			}
-		}
+		// 		// G = optimized_annealing_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
+		// 		G = optimized_genetic_algorithm(G, team_count, population_sz, 10000, 1000, 950, true, result.best_score, 5, 100);
+		// 		optimized_write_output(G);
+		// 		if (G.score < result.best_score + 1e-3) {
+		// 			cout << "Found better score" << endl;
+		// 		} elif (G.score > previous_score) {
+		// 			cout << "Score increased, stopping" << endl << endl;
+		// 			break;
+		// 		}
+		// 		cout << endl;
+		// 		team_count--;
+		// 		previous_score = G.score;
+		// 	}
+		// }
 		auto end = chrono::high_resolution_clock::now();
 		auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 		cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
