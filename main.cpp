@@ -374,7 +374,7 @@ OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, 
 	OptimizedGraph G = G_in;
 	G.score = INF;
 	OptimizedShepardAgent shepard;
-	shepard.init(G, team_count, population_size, T_start0, T_end0);
+	shepard.init(G, team_count, population_size, T_start0, T_end0, randomize);
 	FOR (i, 50) {
 		shepard.step();
 	}
@@ -392,16 +392,21 @@ OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, 
 		if (i % 200 == 0) {
 			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
 			optimized_write_output(G);
-			if (previous_score == best_score) {
+			if (previous_score == best_score || shepard.T_start < 1e-3) {
 				stagnation++;
 				if (stagnation >= stagnation_limit) {
 					cout << "Stagnation limit reached, terminating" << endl;
 					break;
 				}
-				shepard.T_start *= ignition_factor;
-				shepard.T_end *= ignition_factor;
+				if (shepard.T_start < T_start0 / ignition_factor) {
+					shepard.T_start *= ignition_factor;
+					shepard.T_end *= ignition_factor;
+					cout << "Reigniting, temperature set to " << shepard.T_start << endl;
+				} else {
+					shepard.init(G, team_count, population_size, T_start0, T_end0);
+					cout << "Ionizing" << endl;
+				}
 				best_score = 1e18;
-				cout << "Reigniting, temperature set to " << shepard.T_start << endl;
 			}
 			if (G.score <= target_score) {
 				break;
