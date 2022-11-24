@@ -1,7 +1,7 @@
 import os
 from starter import tar
 
-hidden = ['insurance', 'wrath_of_god']
+hidden = ['insurance', 'wrath_of_god', 'sick0', 'sick1']
 
 for size in ['small', 'medium', 'large']:
     for test in range(1, 261):
