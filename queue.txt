@@ -1,4 +1,3 @@
-medium 104 1 771.905609893065 771.905609893065 24470.604730947358 24471_scorched_earth.out https://170-leaderboard.vercel.app/input/medium/104 missing_local
 medium 75 1 187198.1963397978 187198.1963397978 205633.92397343734 205634_insurance.out https://170-leaderboard.vercel.app/input/medium/75 missing_local
 large 222 1 46963.568586974725 46963.568586974725 61506.361406919095 61506_insurance.out https://170-leaderboard.vercel.app/input/large/222 missing_local
 medium 17 1 1315.4603010261908 1315.4603010261908 14844.905433172422 14845_insurance.out https://170-leaderboard.vercel.app/input/medium/17 missing_local
@@ -14,43 +13,43 @@ medium 32 1 3560.1929430497526 3560.1929430497526 9023.043630151078 9023_insuran
 medium 53 1 449.1689070338065 449.1689070338065 5461.205948025516 5461_scorched_earth.out https://170-leaderboard.vercel.app/input/medium/53 missing_local
 large 61 7 4948.176928766389 8182.3911953310835 9393.44303274959 9393_hyper_optimized.out https://170-leaderboard.vercel.app/input/large/61 missing_local
 medium 185 1 6368.024496994366 6368.024496994366 9766.598964833218 9767_insurance.out https://170-leaderboard.vercel.app/input/medium/185 missing_local
-large 40 2 9720.967906719341 12912.612149386032 12912.612149386032 12913_glassed.out https://170-leaderboard.vercel.app/input/large/40 
+large 40 2 9720.967906719341 12912.612149386032 12912.612149386032 12913_glassed.out https://170-leaderboard.vercel.app/input/large/40 _
 small 23 1 3313.8538391474267 3313.8538391474267 5462.506101865805 5463_insurance.out https://170-leaderboard.vercel.app/input/small/23 missing_local
-large 215 5 5460.815003314424 7597.772010603969 7597.772010603969 7598_scorched_earth.out https://170-leaderboard.vercel.app/input/large/215 
-large 149 3 5009.637877844622 7009.637877844622 7009.637877844622 7010_glassed.out https://170-leaderboard.vercel.app/input/large/149 
+large 215 5 5460.815003314424 7597.772010603969 7597.772010603969 7598_scorched_earth.out https://170-leaderboard.vercel.app/input/large/215 _
+large 149 3 5009.637877844622 7009.637877844622 7009.637877844622 7010_glassed.out https://170-leaderboard.vercel.app/input/large/149 _
 small 116 1 2010.797760513179 2010.797760513179 3313.8538391474267 3314_insurance.out https://170-leaderboard.vercel.app/input/small/116 missing_local
 small 143 2 4183.200386104066 4350.158237775079 5462.506101865805 5463_insurance.out https://170-leaderboard.vercel.app/input/small/143 missing_local
-large 169 2 3312.6121493860305 4388.612149386031 4388.612149386031 4389_sheep.out https://170-leaderboard.vercel.app/input/large/169 
+large 169 2 3312.6121493860305 4388.612149386031 4388.612149386031 4389_sheep.out https://170-leaderboard.vercel.app/input/large/169 _
 large 231 1 272.8281828459045 272.8281828459045 1219.2493960703473 1219_scorched_earth.out https://170-leaderboard.vercel.app/input/large/231 missing_local
-large 48 2 34162.577314899565 34933.56088149561 34933.56088149561 34934_insurance.out https://170-leaderboard.vercel.app/input/large/48 
+large 48 2 34162.577314899565 34933.56088149561 34933.56088149561 34934_insurance.out https://170-leaderboard.vercel.app/input/large/48 _
 large 36 1 449.2277266951576 449.2277266951576 1219.2493960703473 1219_scorched_earth.out https://170-leaderboard.vercel.app/input/large/36 missing_local
-large 119 2 26836.167339592925 27368.560881495607 27368.560881495607 27369_hyper_optimized.out https://170-leaderboard.vercel.app/input/large/119 
-large 163 2 30861.66462030395 31379.560881495607 31379.560881495607 31380_hyper_optimized.out https://170-leaderboard.vercel.app/input/large/163 
-medium 40 2 76827.72829574501 77302.61407387788 77302.61407387788 77303_insurance.out https://170-leaderboard.vercel.app/input/medium/40 
+large 119 2 26836.167339592925 27368.560881495607 27368.560881495607 27369_hyper_optimized.out https://170-leaderboard.vercel.app/input/large/119 _
+large 163 2 30861.66462030395 31379.560881495607 31379.560881495607 31380_hyper_optimized.out https://170-leaderboard.vercel.app/input/large/163 _
+medium 40 2 76827.72829574501 77302.61407387788 77302.61407387788 77303_insurance.out https://170-leaderboard.vercel.app/input/medium/40 _
 large 132 1 29794.56858697473 29794.56858697473 30181.50819222289 30182_insurance.out https://170-leaderboard.vercel.app/input/large/132 missing_local
-small 156 6 345754.3688118974 346087.3688118974 346087.3688118974 346087_scorched_earth.out https://170-leaderboard.vercel.app/input/small/156 
-large 6 5 494.2023873427806 766.2277266951577 766.2277266951577 766_glassed.out https://170-leaderboard.vercel.app/input/large/6 
-large 223 6 16361.543863625753 17196.130152600876 16597.337421330994 16597_insurance.out https://170-leaderboard.vercel.app/input/large/223 
-small 185 2 3279.107781410937 3402.5685358765263 3402.5685358765263 3403_hyper_optimized.out https://170-leaderboard.vercel.app/input/small/185 
-large 25 2 449.2277266951576 566.2277266951577 522.2277266951577 522_pain.out https://170-leaderboard.vercel.app/input/large/25 
-medium 14 2 1176.9430953185015 1219.2493960703473 1219.2493960703473 1219_glassed.out https://170-leaderboard.vercel.app/input/medium/14 
-large 224 2 34908.275376374564 35263.63694137671 34931.275376374564 34931_insurance.out https://170-leaderboard.vercel.app/input/large/224 
-small 245 2 3353.8538391474267 3367.2003861040653 3367.2003861040653 3367_glassed.out https://170-leaderboard.vercel.app/input/small/245 
-small 130 2 132137.71250700523 132171.91109705964 132149.71250700523 132150_insurance.out https://170-leaderboard.vercel.app/input/small/130 
-small 114 4 385535.3688118974 385542.3688118974 385542.3688118974 385542_scorched_earth.out https://170-leaderboard.vercel.app/input/small/114 
-large 32 2 442.8281828459045 449.2277266951576 449.2277266951576 449_insurance.out https://170-leaderboard.vercel.app/input/large/32 
-large 173 2 3355.6121493860305 3361.7463742125965 3361.7463742125965 3362_glassed.out https://170-leaderboard.vercel.app/input/large/173 
-small 125 4 59774.31591025766 59780.31591025766 59780.31591025766 59780_glassed.out https://170-leaderboard.vercel.app/input/small/125 
-medium 156 5 227260.9800856715 227262.9800856715 227262.9800856715 227263_scorched_earth.out https://170-leaderboard.vercel.app/input/medium/156 
-medium 13 8 366095.4145999371 366096.1710292099 366096.1710292099 366096_scorched_earth.out https://170-leaderboard.vercel.app/input/medium/13 
-medium 46 2 739.905609893065 740.2965546041568 740.2965546041568 740_glassed.out https://170-leaderboard.vercel.app/input/medium/46 
-large 117 4 739.905609893065 740.092651636277 740.092651636277 740_glassed.out https://170-leaderboard.vercel.app/input/large/117 
+small 156 6 345754.3688118974 346087.3688118974 346087.3688118974 346087_scorched_earth.out https://170-leaderboard.vercel.app/input/small/156 _
+large 6 5 494.2023873427806 766.2277266951577 766.2277266951577 766_glassed.out https://170-leaderboard.vercel.app/input/large/6 _
+large 223 6 16361.543863625753 17196.130152600876 16597.337421330994 16597_insurance.out https://170-leaderboard.vercel.app/input/large/223 _
+small 185 2 3279.107781410937 3402.5685358765263 3402.5685358765263 3403_hyper_optimized.out https://170-leaderboard.vercel.app/input/small/185 _
+large 25 2 449.2277266951576 566.2277266951577 522.2277266951577 522_pain.out https://170-leaderboard.vercel.app/input/large/25 _
+medium 14 2 1176.9430953185015 1219.2493960703473 1219.2493960703473 1219_glassed.out https://170-leaderboard.vercel.app/input/medium/14 _
+large 224 2 34908.275376374564 35263.63694137671 34931.275376374564 34931_insurance.out https://170-leaderboard.vercel.app/input/large/224 _
+small 245 2 3353.8538391474267 3367.2003861040653 3367.2003861040653 3367_glassed.out https://170-leaderboard.vercel.app/input/small/245 _
+small 130 2 132137.71250700523 132171.91109705964 132149.71250700523 132150_insurance.out https://170-leaderboard.vercel.app/input/small/130 _
+small 114 4 385535.3688118974 385542.3688118974 385542.3688118974 385542_scorched_earth.out https://170-leaderboard.vercel.app/input/small/114 _
+large 32 2 442.8281828459045 449.2277266951576 449.2277266951576 449_insurance.out https://170-leaderboard.vercel.app/input/large/32 _
+large 173 2 3355.6121493860305 3361.7463742125965 3361.7463742125965 3362_glassed.out https://170-leaderboard.vercel.app/input/large/173 _
+small 125 4 59774.31591025766 59780.31591025766 59780.31591025766 59780_glassed.out https://170-leaderboard.vercel.app/input/small/125 _
+medium 156 5 227260.9800856715 227262.9800856715 227262.9800856715 227263_scorched_earth.out https://170-leaderboard.vercel.app/input/medium/156 _
+medium 13 8 366095.4145999371 366096.1710292099 366096.1710292099 366096_scorched_earth.out https://170-leaderboard.vercel.app/input/medium/13 _
+medium 46 2 739.905609893065 740.2965546041568 740.2965546041568 740_glassed.out https://170-leaderboard.vercel.app/input/medium/46 _
+large 117 4 739.905609893065 740.092651636277 740.092651636277 740_glassed.out https://170-leaderboard.vercel.app/input/large/117 _
 large 160 1 14842.31591025766 14842.31591025766 14842.419970980998 14842_insurance.out https://170-leaderboard.vercel.app/input/large/160 missing_local
 large 47 1 24470.262246465125 24470.262246465125 24470.320038415917 24470_insurance.out https://170-leaderboard.vercel.app/input/large/47 missing_local
-medium 148 2 43191.49451921688 43191.494519216896 43191.494519216896 43191_hyper_optimized.out https://170-leaderboard.vercel.app/input/medium/148 
-large 203 4 12351.259650403294 12351.259650403299 12351.259650403299 12351_glassed.out https://170-leaderboard.vercel.app/input/large/203 
-medium 130 4 14544.814293170422 14544.814293170428 14544.814293170428 14545_glassed.out https://170-leaderboard.vercel.app/input/medium/130 
-large 60 3 12554.88198445573 12554.881984455735 12554.881984455735 12555_glassed.out https://170-leaderboard.vercel.app/input/large/60 
+medium 148 2 43191.49451921688 43191.494519216896 43191.494519216896 43191_hyper_optimized.out https://170-leaderboard.vercel.app/input/medium/148 _
+large 203 4 12351.259650403294 12351.259650403299 12351.259650403299 12351_glassed.out https://170-leaderboard.vercel.app/input/large/203 _
+medium 130 4 14544.814293170422 14544.814293170428 14544.814293170428 14545_glassed.out https://170-leaderboard.vercel.app/input/medium/130 _
+large 60 3 12554.88198445573 12554.881984455735 12554.881984455735 12555_glassed.out https://170-leaderboard.vercel.app/input/large/60 _
 medium 127 7 3312.786328891362 3313.02869758731 3312.786328891362 3313_insurance.out https://170-leaderboard.vercel.app/input/medium/127 published
 large 226 5 12554.88198445573 12554.881984455735 12554.88198445573 12555_sheep.out https://170-leaderboard.vercel.app/input/large/226 published
 large 45 2 12554.88198445573 12554.881984455735 12554.88198445573 12555_sheep.out https://170-leaderboard.vercel.app/input/large/45 published
@@ -249,6 +248,7 @@ large 97 1 2009.6378778446226 2009.6378778446226 2009.6378778446226 2010_glassed
 large 99 1 272.8281828459045 272.8281828459045 272.8281828459045 273_coloring.out https://170-leaderboard.vercel.app/input/large/99 published
 medium 100 1 449.1689070338065 449.1689070338065 449.1689070338065 449_optimized.out https://170-leaderboard.vercel.app/input/medium/100 published
 medium 103 1 449.1689070338065 449.1689070338065 449.1689070338065 449_optimized.out https://170-leaderboard.vercel.app/input/medium/103 published
+medium 104 1 771.905609893065 771.905609893065 771.905609893065 772_restored.out https://170-leaderboard.vercel.app/input/medium/104 published
 medium 105 1 272.8281828459045 272.8281828459045 272.8281828459045 273_coloring.out https://170-leaderboard.vercel.app/input/medium/105 published
 medium 106 1 739.905609893065 739.905609893065 739.905609893065 740_hyper_optimized.out https://170-leaderboard.vercel.app/input/medium/106 published
 medium 107 1 80613.4374578826 80613.4374578826 80613.4374578826 80613_insurance.out https://170-leaderboard.vercel.app/input/medium/107 published
