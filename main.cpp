@@ -434,7 +434,7 @@ OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G_in, ll team_count, 
 void rigorous_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
 	short population_sz = 256;
-	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl;
+	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
 	optimized_read_graph(G, result.size, result.id, "sick0");
