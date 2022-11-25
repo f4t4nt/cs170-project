@@ -711,3 +711,210 @@ Graph genetic_algorithm(Graph &G_in, ll team_count, ll population_size = 10, ll 
 	}
 	return all_time_best;
 }
+
+// ------------------------------
+
+struct OptimizedShepardAgent {
+	short V;
+	ch T;
+	ld mutation_rate;
+	unsigned int population_size, mutations, cross_overs;
+	ld variation = 0.0;
+	vector<OptimizedGraph> population;
+	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld mutation_rate, bool randomize = true) {
+		this->population_size = population_size;
+		this->mutation_rate = mutation_rate;
+		mutations = population_size * 1000;
+		cross_overs = population_size * 500;
+		population = vector<OptimizedGraph>(population_size + mutations + cross_overs);
+		// if (randomize) {
+		// 	FOR (i, population_size * 20) {
+		// 		population[i] = optimized_random_assignment(G_in, team_count);
+		// 		optimized_get_score(population[i]);
+		// 	}
+        //     sort(population.begin(), population.begin() + population_size * 20, [](OptimizedGraph &a, OptimizedGraph &b) {
+        //         return a.score < b.score;
+        //     });
+		// } else {
+			ld score = optimized_get_score(G_in);
+			FOR (i, population_size) {
+				population[i] = G_in;
+				population[i].score = score;
+			}
+		// }
+		V = population[0].invariant->V;
+		T = population[0].invariant->T;
+	}
+	short rand_parent() {
+		// size_t sm = population_size * 201 + population_size * population_size;
+		// size_t y = rand2() % sm;
+		// auto result = population_size - 1 - (size_t)((sqrt(201*201 + 4 * y) - 201) / 2);
+		// return max(0, -1 + (short)result);
+		vector<ld> weights(population_size);
+		FOR (i, population_size) {
+			weights[i] = 1e6 / population[i].score / population[i].score;
+		}
+		return weighted_random(weights);
+	}
+	void mutate(size_t i) {
+		auto &G = population[i];
+		G = population[rand_parent()];
+		short start = rand() % V;
+		short end = (start + rand() % ((ll) (mutation_rate * V) + 1)) % V;
+		if (start <= end) {
+			FOB (node, start, end) {
+				ch old_team = G.node_teams[node];
+				ch new_team = rand() % T;
+				while (new_team == old_team) {
+					new_team = rand() % T;
+				}
+				G.node_teams[node] = new_team;
+				G.team_counts[old_team]--;
+				G.team_counts[new_team]++;
+			}
+		} else {
+			FOB (node, start, V) {
+				ch old_team = G.node_teams[node];
+				ch new_team = rand() % T;
+				while (new_team == old_team) {
+					new_team = rand() % T;
+				}
+				G.node_teams[node] = new_team;
+				G.team_counts[old_team]--;
+				G.team_counts[new_team]++;
+			}
+			FOR (node, end) {
+				ch old_team = G.node_teams[node];
+				ch new_team = rand() % T;
+				while (new_team == old_team) {
+					new_team = rand() % T;
+				}
+				G.node_teams[node] = new_team;
+				G.team_counts[old_team]--;
+				G.team_counts[new_team]++;
+			}
+		}
+		optimized_get_score(G);
+		ll shift = rand() % 3 + 1;
+		FOR (node, V) {
+			G.node_teams[node] = (G.node_teams[node] + shift) % T;
+		}
+		rotate(G.node_teams.begin(), G.node_teams.begin() + shift, G.node_teams.end());
+	}
+	void cross(size_t i) {
+		short a = rand_parent();
+		short b = rand_parent();
+		while(a == b) {
+			b = rand_parent();
+		}
+		auto& g = population[i];
+		g = population[a];
+		optimized_cross(g, population[b]);
+	}
+	void prune() {
+        FOR (i, population_size) {
+            population[i].score = 1e18;
+        }
+		sort(all(population), [](const OptimizedGraph &a, const OptimizedGraph &b) {
+			return a.score < b.score;
+		});
+		size_t i = 1, j = 0, k = 1;
+		for (; i < population_size; i++) {
+			while (population[j].score == population[k].score &&
+                population[j].node_teams[0] == population[k].node_teams[0]) {
+				k++;
+			}
+			population[i] = population[k];
+			j = k;
+			k++;
+		}
+		variation = population_size * 1.0 / k;
+	}
+	void step() {
+		#pragma omp parallel for
+		for (size_t i = population_size; i < sz(population); i++) {
+			if (i < population_size + cross_overs) {
+				cross(i);
+			} else {
+				mutate(i);
+			}
+		}
+		prune();
+		mutation_rate = max((ld) 0.05, 0.99 * mutation_rate);
+	}
+};
+
+OptimizedGraph optimized_genetic_algorithm(OptimizedGraph &G, ll team_count, ll population_size, ll generations, bool randomize = false, ld mutation_rate = 1, ld target_score = 0, short stagnation_limit = 1) {
+	G.score = INF;
+	OptimizedShepardAgent shepard;
+	shepard.init(G, team_count, population_size, mutation_rate, randomize);
+	bool extended = true;
+	ll stagnation = 0;
+	ld previous_score = 1e18;
+	auto tmp = vector<short>(500);
+	FOR (i, generations) {
+		auto population_best = shepard.population[0];
+		if (population_best.score < G.score) {
+			G = population_best;
+		}
+		if (i % 10 == 0) {
+			optimized_write_output(G);
+			cout << "Generation " << i << " best score " << G.score
+				<< ", worst score (" << shepard.population[shepard.population_size - 1].score
+				<< " | " << shepard.population[sz(shepard.population) - 1].score
+				<< "), variation "  << shepard.variation << ", mutation rate " << shepard.mutation_rate << endl;
+			if (previous_score == G.score) {
+				stagnation++;
+				if (stagnation >= stagnation_limit) {
+					cout << "Stagnation limit reached, terminating" << endl;
+					break;
+				}
+			}
+			if (G.score <= target_score && extended) {
+				stagnation_limit++;
+				extended = false;
+			}
+			previous_score = G.score;
+		}
+		shepard.step();
+	}
+	return G;
+}
+
+void dolly_solve(Result &result, ld target_score) {
+	OptimizedGraph G;
+	short population_sz = 900;
+	cout << "Dollying " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
+	ch team_count = max_teams(result.best_score);
+	ld previous_score = INF;
+	// optimized_read_graph(G, result.size, result.id, "sick2");
+	optimized_read_best_graph(G, result.size, result.id, "sick2");
+    team_count = G.invariant->T + 1;
+	while (team_count >= 2) {
+		cout << "Trying " << (ll) team_count << " teams" << endl;
+		init_teams(G, team_count);
+		G = optimized_genetic_algorithm(G, team_count, population_sz, 2000, true, 1, target_score, 2);
+		optimized_write_output(G);
+		if (G.score < target_score + 1e-9) {
+			cout << "Target score reached, terminating" << endl;
+		} elif (G.score > previous_score) {
+			cout << "Increase limit reached, terminating" << endl;
+			break;
+		}
+		cout << endl;
+		team_count--;
+		previous_score = G.score;
+	}
+}
+
+void dolly_improve(Result &result) {
+	OptimizedGraph G;
+	short population_sz = 100;
+	optimized_read_best_graph(G, result.size, result.id, "sick2");
+	cout << "Shearing " << result.size << result.id << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
+	G = optimized_genetic_algorithm(G, G.invariant->T, population_sz, 1000, false, 0.05, 0, 100);
+	optimized_write_output(G);
+	if (G.score < result.best_score) {
+		cout << "Found better score" << endl;
+	}
+}
