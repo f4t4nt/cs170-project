@@ -208,13 +208,11 @@ ld optimized_get_score(OptimizedGraph &G) {
 tuple<ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, short node, ch old_team, ch new_team) {
 	ld B_old = G.B_vec[old_team] - 1.0 / G.invariant->V,
 		B_new = G.B_vec[new_team] + 1.0 / G.invariant->V;
-
 	ld B_norm_squared = G.B_norm_squared -
 		G.B_vec[old_team] * G.B_vec[old_team] -
 		G.B_vec[new_team] * G.B_vec[new_team] +
 		B_old * B_old +
 		B_new * B_new;
-
 	ld C_w = G.C_w;
 	short i = G.invariant->edge_indices[node], end = (node == G.invariant->V - 1 ? 2 * G.invariant->E : G.invariant->edge_indices[node + 1]);
 	auto &edges = G.invariant->edges;
@@ -229,7 +227,6 @@ tuple<ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, short node, 
 		}
 		i++;
 	}
-
 	return {C_w, exp(B_EXP * sqrt(B_norm_squared)), B_norm_squared, B_old, B_new};
 }
 
@@ -258,17 +255,29 @@ ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<short> &nodes, v
 }
 
 void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
-	FOB(i, 0, a.invariant->V) {
-		if (rand() % 2) {
-			auto old_team =a.node_teams[i]; 
-			auto new_team =b.node_teams[i]; 
-			if (old_team != new_team) {
-				tie(a.C_w, a.score, a.B_norm_squared, a.B_vec[old_team], a.B_vec[new_team]) = optimized_update_score(a, i, old_team, new_team);
-				a.score += a.C_w + a.K;
-				a.node_teams[i] = new_team;
-				a.team_counts[old_team]--;
-				a.team_counts[new_team]++;
-			}
+	short start = rand() % a.invariant->V, end = rand() % a.invariant->V;
+	if (start < end) {
+		FOB (node, start, end) {
+			ch old_team = a.node_teams[node];
+			ch new_team = b.node_teams[node];
+			a.node_teams[node] = new_team;
+			a.team_counts[old_team]--;
+			a.team_counts[new_team]++;
+		}
+	} else {
+		FOB (node, start, a.invariant->V) {
+			ch old_team = a.node_teams[node];
+			ch new_team = b.node_teams[node];
+			a.node_teams[node] = new_team;
+			a.team_counts[old_team]--;
+			a.team_counts[new_team]++;
+		}
+		FOR (node, end) {
+			ch old_team = a.node_teams[node];
+			ch new_team = b.node_teams[node];
+			a.node_teams[node] = new_team;
+			a.team_counts[old_team]--;
+			a.team_counts[new_team]++;
 		}
 	}
 	optimized_get_score(a);
