@@ -130,8 +130,9 @@ struct OptimizedGraphInvariant {
 };
 
 struct OptimizedGraph {
+	ld score;
 	shared_ptr<const OptimizedGraphInvariant> invariant;
-	ld C_w, K, B_norm_squared, score;
+	ld C_w, K, B_norm_squared;
 	vector<ld> B_vec;
 	vector<ch> node_teams;
 	vector<short> team_counts;
@@ -144,6 +145,7 @@ struct Result {
 	ld best_score;
 	ld submission_score;
 	ld local_score;
+	ld delta_score;
 	str local_file;
 	str url;
 	str notes;
@@ -191,12 +193,14 @@ ld optimized_get_score(OptimizedGraph &G) {
 			G.C_w += weight;
 		}
 	}
+
 	G.C_w /= 2;
 	G.B_norm_squared = 0;
 	FOR (i, G.invariant->T) {
 		G.B_vec[i] = G.team_counts[i] / (ld) G.invariant->V - 1.0 / G.invariant->T;
 		G.B_norm_squared += G.B_vec[i] * G.B_vec[i];
 	}
+
 	G.score = G.C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
 	return G.score;
 }
@@ -204,11 +208,13 @@ ld optimized_get_score(OptimizedGraph &G) {
 tuple<ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, short node, ch old_team, ch new_team) {
 	ld B_old = G.B_vec[old_team] - 1.0 / G.invariant->V,
 		B_new = G.B_vec[new_team] + 1.0 / G.invariant->V;
+
 	ld B_norm_squared = G.B_norm_squared -
 		G.B_vec[old_team] * G.B_vec[old_team] -
 		G.B_vec[new_team] * G.B_vec[new_team] +
 		B_old * B_old +
 		B_new * B_new;
+
 	ld C_w = G.C_w;
 	short i = G.invariant->edge_indices[node], end = (node == G.invariant->V - 1 ? 2 * G.invariant->E : G.invariant->edge_indices[node + 1]);
 	auto &edges = G.invariant->edges;
@@ -223,6 +229,7 @@ tuple<ld, ld, ld, ld, ld> optimized_update_score(OptimizedGraph &G, short node, 
 		}
 		i++;
 	}
+
 	return {C_w, exp(B_EXP * sqrt(B_norm_squared)), B_norm_squared, B_old, B_new};
 }
 
@@ -253,9 +260,15 @@ ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<short> &nodes, v
 void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
 	FOB(i, 0, a.invariant->V) {
 		if (rand() % 2) {
-			a.team_counts[a.node_teams[i]]--;
-			a.node_teams[i] = b.node_teams[i];
-			a.team_counts[a.node_teams[i]]++;
+			auto old_team =a.node_teams[i]; 
+			auto new_team =b.node_teams[i]; 
+			if (old_team != new_team) {
+				tie(a.C_w, a.score, a.B_norm_squared, a.B_vec[old_team], a.B_vec[new_team]) = optimized_update_score(a, i, old_team, new_team);
+				a.score += a.C_w + a.K;
+				a.node_teams[i] = new_team;
+				a.team_counts[old_team]--;
+				a.team_counts[new_team]++;
+			}
 		}
 	}
 	optimized_get_score(a);
@@ -436,9 +449,9 @@ vector<Result> read_queue() {
 	while (getline(fin, line)) {
 		stringstream ss(line);
 		ll id, rank;
-		ld best_score, submission_score, local_score;
+		ld best_score, submission_score, local_score, delta_score;
 		str size, local_file, url, notes;
-		ss >> size >> id >> rank >> best_score >> submission_score >> local_score >> local_file >> url >> notes;
+		ss >> size >> id >> rank >> best_score >> submission_score >> local_score >> local_file >> url >> notes >> delta_score;
 		results.pb({
 			size,
 			id,
@@ -446,6 +459,7 @@ vector<Result> read_queue() {
 			best_score,
 			submission_score,
 			local_score,
+			delta_score,
 			local_file,
 			url,
 			notes
@@ -507,4 +521,20 @@ ll weighted_random(vector<ld> &weights, ll range = 0) {
 	}
 	assert(false);
 	return -1;
+}
+
+bool vec_eq(vector<char> &a, vector<char> &b) {
+	if (sz(a) != sz(b)) {
+		return false;
+	}
+	FOR (i, sz(a)) {
+		if (a[i] != b[i]) {
+			return false;
+		}
+	}
+	return true;
+}
+
+int rand2() {
+	return rand() << 15 + rand();
 }
