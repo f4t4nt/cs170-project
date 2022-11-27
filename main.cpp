@@ -227,9 +227,9 @@ struct OptimizedBlacksmithController {
 				optimized_get_score(population[i].G);
 			}
 		} else {
+			ll score = optimized_get_score(G_in);
 			FOR (i, population_size) {
 				population[i] = {G_in, T_start};
-				optimized_get_score(population[i].G);
 			}
 		}
 	}
@@ -240,14 +240,14 @@ struct OptimizedBlacksmithController {
 			auto &agent = population[i];
 			agent.T = T_start;
 			while (agent.T > T_end) {
-				FOR (j, 1000) {
+				FOR (j, 500) {
 					agent.step();
 				}
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.999;
-		T_end *= 0.999;
+		T_start *= 0.995;
+		T_end *= 0.995;
 	}
 	void step_and_prune() {
 		step();
@@ -314,12 +314,12 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, l
 
 void rigorous_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
-	short population_sz = 900;
+	short population_sz = 920;
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
 	// optimized_read_graph(G, result.size, result.id, "sick2");
-	optimized_read_best_graph(G, result.size, result.id, "hopeless_dolly");
+	optimized_read_best_graph(G, result.size, result.id, "hopeless_dolly2");
     team_count = min((ch) (G.invariant->T + 1), team_count);
 	short increase_limit = 1;
 	while (team_count >= 2) {
@@ -345,17 +345,94 @@ void rigorous_solve(Result &result, ld target_score) {
 void improve_existing(Result &result) {
 	OptimizedGraph G;
 	short population_sz = 900;
-	optimized_read_best_graph(G, result.size, result.id, "hopeless_dolly");
+	optimized_read_best_graph(G, result.size, result.id, "hopeless_dolly2");
 	cout << "Improving " << result.size << result.id << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, 0.0, 2, 1000);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 10, 9.5, false, result.best_score, 2, 100);
 	optimized_write_output(G);
 	if (G.score < result.best_score) {
 		cout << "Found better score" << endl;
 	}
 }
 
+void specific_solve(Result &result) {
+	OptimizedGraph G;
+	short population_sz = 920;
+	cout << "Specifically solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
+	ch team_count, team_count_min;
+	if (result.size == "large") {
+		if (result.id == 134) {
+			team_count = max_teams(result.best_score);
+			team_count_min = 9;
+		} elif (result.id == 147) {
+			team_count = max_teams(result.best_score);
+			team_count_min = 9;
+		} elif (result.id == 61) {
+			team_count = max_teams(result.best_score);
+			team_count_min = 7;
+		} elif (result.id == 40) {
+			team_count = 8;
+			team_count_min = 7;
+		} elif (result.id == 215) {
+			team_count = 8;
+			team_count_min = 7;
+		} elif (result.id == 25) {
+			team_count = 3;
+			team_count_min = 3;
+		} elif (result.id == 32) {
+			team_count = 2;
+			team_count_min = 2;
+		} elif (result.id == 6) {
+			team_count = 3;
+			team_count_min = 2;
+		} elif (result.id == 185) {
+			cout << "Never mind" << endl << endl;
+			return;
+			team_count = 6;
+			team_count_min = 6;
+		} elif (result.id == 117) {
+			team_count = 4;
+			team_count_min = 2;
+		} else {
+			rigorous_solve(result, 0.0);
+			return;
+		}
+	} elif (result.size == "medium") {
+		rigorous_solve(result, 0.0);
+		return;
+	} else {
+		if (result.id == 21) {
+			team_count = 5;
+			team_count_min = 5;
+		} elif (result.id == 116) {
+			team_count = 5;
+			team_count_min = 5;
+		} else {
+			rigorous_solve(result, 0.0);
+			return;
+		}
+	}
+	ll previous_score = 1e18;
+	optimized_read_graph(G, result.size, result.id, "hopeless_dolly2");
+	while (team_count >= team_count_min) {
+		cout << "Trying " << (ll) team_count << " teams" << endl;
+		init_teams(G, team_count);
+		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, 0.0, 2, 100);
+		optimized_write_output(G);
+		if (G.score < result.best_score) {
+			cout << "Found better score" << endl;
+			break;
+		} elif (G.score > previous_score) {
+			cout << "Increase limit reached, terminating" << endl;
+			break;
+		}
+		cout << endl;
+		team_count--;
+		previous_score = G.score;
+	}
+}
+
 int main() {
-	// srand(time(NULL));
+	srand(time(NULL));
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	while (true) {
@@ -365,7 +442,7 @@ int main() {
 			} elif (result.rank == 1 || result.notes == "sleeper") {
 				improve_existing(result);
 			} else {
-                rigorous_solve(result, result.best_score);
+                specific_solve(result);
 			}
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
