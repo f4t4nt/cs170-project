@@ -2,6 +2,7 @@
 /.vs
 /bin
 /python/__pycache__
+/python/*.pkl
 /*.exe
 /*.ilk
 /*.obj
