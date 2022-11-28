@@ -1,6 +1,5 @@
-import pickle as pkl
 import vpython as vp
-import jax.numpy as jnp
+import pickle as pkl
 from starter import *
 
 with open('./python/history.pkl', 'rb') as f:

@@ -918,3 +918,111 @@ void dolly_improve(Result &result) {
 		cout << "Found better score" << endl;
 	}
 }
+
+struct OptimizedAnnealingBatchAgent {
+	OptimizedGraph G;
+	ld T;
+	void init(OptimizedGraph &G_in, ll batch_size0, ld T0) {
+		G = G_in;
+		T = T0;
+	}
+	void stepSingle() {
+		short node = rand() % (ll) G.invariant->V;
+		ch old_team = G.node_teams[node];
+		ch new_team = rand() % (ll) G.invariant->T;
+		while (new_team == old_team) {
+			new_team = rand() % (ll) G.invariant->T;
+		}
+		ld C_w, B, B_norm_squared, B_old, B_new;
+		tie(C_w, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
+		ld new_score = C_w + G.K + B;
+		if (new_score < G.score) {
+			G.node_teams[node] = new_team;
+			G.team_counts[old_team]--;
+			G.team_counts[new_team]++;
+			G.B_vec[old_team] = B_old;
+			G.B_vec[new_team] = B_new;
+			G.score = new_score;
+			G.C_w = C_w;
+			G.B_norm_squared = B_norm_squared;
+			return;
+		}
+		ld p = exp((G.score - new_score) / T);
+		if (rand() % 1000000 < p * 1000000) {
+			G.node_teams[node] = new_team;
+			G.team_counts[old_team]--;
+			G.team_counts[new_team]++;
+			G.B_vec[old_team] = B_old;
+			G.B_vec[new_team] = B_new;
+			G.score = new_score;
+			G.C_w = C_w;
+			G.B_norm_squared = B_norm_squared;
+			return;
+		}
+	}
+	void stepSwaps(ll batch_size = 2) {
+		if (batch_size <= 0) {
+			return;
+		} elif (batch_size == 1) {
+			stepSingle();
+			return;
+		}
+		ch team_count = 0;
+		vector<short> team_pick_node(G.invariant->T, -1);
+		if (team_count >= G.invariant->T) {
+			team_pick_node = vector<short>(G.invariant->T, 1);
+		} else {
+			while (team_count < batch_size) {
+				ch team = rand() % (ch) G.invariant->T;
+				if (team_pick_node[team] == 1) {
+					continue;
+				}
+				team_pick_node[team] = 1;
+				team_count++;
+			}
+		}
+		FOR (i, G.invariant->T) {
+			if (team_pick_node[i] == 1) {
+				team_pick_node[i] = rand() % (short) G.team_counts[i];
+			}
+		}
+		vector<short> nodes;
+		vector<ch> old_teams;
+		FOR (i, G.invariant->V) {
+			if (team_pick_node[G.node_teams[i]] == 0) {
+				nodes.pb(i);
+				old_teams.pb(G.node_teams[i]);
+			}
+			team_pick_node[G.node_teams[i]]--;
+		}
+		assert(sz(nodes) == batch_size);
+		vector<ch> new_teams = old_teams;
+		sshuffle(new_teams);
+		ld C_w = optimized_update_score_batch_swaps(G, nodes, old_teams, new_teams);
+		if (C_w < G.C_w) {
+			FOR (i, batch_size) {
+				if (old_teams[i] != new_teams[i]) {
+					G.node_teams[nodes[i]] = new_teams[i];
+					G.team_counts[old_teams[i]]--;
+					G.team_counts[new_teams[i]]++;
+				}
+			}
+			G.C_w = C_w;
+			G.score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
+			return;
+		}
+		ld p = exp((G.C_w - C_w) / T);
+		if (rand() % 1000000 < p * 1000000) {
+			FOR (i, batch_size) {
+				if (old_teams[i] != new_teams[i]) {
+					G.node_teams[nodes[i]] = new_teams[i];
+					G.team_counts[old_teams[i]]--;
+					G.team_counts[new_teams[i]]++;
+				}
+			}
+			G.C_w = C_w;
+			G.score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
+			return;
+		}
+	}
+};
