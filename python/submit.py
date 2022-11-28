@@ -19,7 +19,7 @@ for size in ['small', 'medium', 'large']:
                 score_G = score(G)
                 if round(score_G) != float((filename.split('_')[0]).split('.')[0]):
                     print('Score mismatch, file: ' + folder + '/' + filename + ', score: ' + str(score_G))
-                else:
+                if score_G < best_score:
                     best_file = filename
                     best_score = score_G
         new_used = best_file.split('_')[1:]

@@ -4,10 +4,6 @@ import pickle as pkl
 import time
 from starter import *
 
-TF_CPP_MIN_LOG_LEVEL=0
-from jax.lib import xla_bridge
-print(xla_bridge.get_backend().platform)
-
 dt = 5e-4
 
 G = read_input('./tests/small/small156/graph.in')

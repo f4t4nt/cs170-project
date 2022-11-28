@@ -44,7 +44,6 @@ OptimizedGraph optimized_coloring_threshold(OptimizedGraph G) {
 				G_copy.team_counts[team]++;
 			}
 		}
-
 		optimized_get_score(G_copy);
 		if (G_copy.score < G.score) {
 			G = G_copy;
@@ -92,7 +91,7 @@ struct OptimizedAnnealingAgent {
 			return;
 		}
 		ld p = exp((G.score - new_score) / T);
-		if (rand() % 1000000 < p * 1000000) {
+		if (rand() % 10000 < p * 10000) {
 			G.node_teams[node] = new_team;
 			G.team_counts[old_team]--;
 			G.team_counts[new_team]++;
