@@ -105,114 +105,6 @@ struct OptimizedAnnealingAgent {
 	}
 };
 
-struct OptimizedAnnealingBatchAgent {
-	OptimizedGraph G;
-	ld T;
-	void init(OptimizedGraph &G_in, ll batch_size0, ld T0) {
-		G = G_in;
-		T = T0;
-	}
-	void stepSingle() {
-		short node = rand() % (ll) G.invariant->V;
-		ch old_team = G.node_teams[node];
-		ch new_team = rand() % (ll) G.invariant->T;
-		while (new_team == old_team) {
-			new_team = rand() % (ll) G.invariant->T;
-		}
-		ld C_w, B, B_norm_squared, B_old, B_new;
-		tie(C_w, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
-		ld new_score = C_w + G.K + B;
-		if (new_score < G.score) {
-			G.node_teams[node] = new_team;
-			G.team_counts[old_team]--;
-			G.team_counts[new_team]++;
-			G.B_vec[old_team] = B_old;
-			G.B_vec[new_team] = B_new;
-			G.score = new_score;
-			G.C_w = C_w;
-			G.B_norm_squared = B_norm_squared;
-			return;
-		}
-		ld p = exp((G.score - new_score) / T);
-		if (rand() % 1000000 < p * 1000000) {
-			G.node_teams[node] = new_team;
-			G.team_counts[old_team]--;
-			G.team_counts[new_team]++;
-			G.B_vec[old_team] = B_old;
-			G.B_vec[new_team] = B_new;
-			G.score = new_score;
-			G.C_w = C_w;
-			G.B_norm_squared = B_norm_squared;
-			return;
-		}
-	}
-	void stepSwaps(ll batch_size = 2) {
-		if (batch_size <= 0) {
-			return;
-		} elif (batch_size == 1) {
-			stepSingle();
-			return;
-		}
-		ch team_count = 0;
-		vector<short> team_pick_node(G.invariant->T, -1);
-		if (team_count >= G.invariant->T) {
-			team_pick_node = vector<short>(G.invariant->T, 1);
-		} else {
-			while (team_count < batch_size) {
-				ch team = rand() % (ch) G.invariant->T;
-				if (team_pick_node[team] == 1) {
-					continue;
-				}
-				team_pick_node[team] = 1;
-				team_count++;
-			}
-		}
-		FOR (i, G.invariant->T) {
-			if (team_pick_node[i] == 1) {
-				team_pick_node[i] = rand() % (short) G.team_counts[i];
-			}
-		}
-		vector<short> nodes;
-		vector<ch> old_teams;
-		FOR (i, G.invariant->V) {
-			if (team_pick_node[G.node_teams[i]] == 0) {
-				nodes.pb(i);
-				old_teams.pb(G.node_teams[i]);
-			}
-			team_pick_node[G.node_teams[i]]--;
-		}
-		assert(sz(nodes) == batch_size);
-		vector<ch> new_teams = old_teams;
-		sshuffle(new_teams);
-		ld C_w = optimized_update_score_batch_swaps(G, nodes, old_teams, new_teams);
-		if (C_w < G.C_w) {
-			FOR (i, batch_size) {
-				if (old_teams[i] != new_teams[i]) {
-					G.node_teams[nodes[i]] = new_teams[i];
-					G.team_counts[old_teams[i]]--;
-					G.team_counts[new_teams[i]]++;
-				}
-			}
-			G.C_w = C_w;
-			G.score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
-			return;
-		}
-		ld p = exp((G.C_w - C_w) / T);
-		if (rand() % 1000000 < p * 1000000) {
-			FOR (i, batch_size) {
-				if (old_teams[i] != new_teams[i]) {
-					G.node_teams[nodes[i]] = new_teams[i];
-					G.team_counts[old_teams[i]]--;
-					G.team_counts[new_teams[i]]++;
-				}
-			}
-			G.C_w = C_w;
-			G.score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
-			return;
-		}
-	}
-};
-
 struct OptimizedBlacksmithController {
 	vector<OptimizedAnnealingAgent> population;
 	ld T_start, T_end;
@@ -318,7 +210,7 @@ void rigorous_solve(Result &result, ld target_score) {
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
 	// optimized_read_graph(G, result.size, result.id, "sick2");
-	optimized_read_best_graph(G, result.size, result.id, "hopeless_dolly2");
+	optimized_read_best_graph(G, result.size, result.id, "rand_error");
     team_count = min((ch) (G.invariant->T + 1), team_count);
 	short increase_limit = 1;
 	while (team_count >= 2) {
@@ -343,90 +235,13 @@ void rigorous_solve(Result &result, ld target_score) {
 
 void improve_existing(Result &result) {
 	OptimizedGraph G;
-	short population_sz = 900;
-	optimized_read_best_graph(G, result.size, result.id, "hopeless_dolly2");
+	short population_sz = 920;
+	optimized_read_best_graph(G, result.size, result.id, "rand_error");
 	cout << "Improving " << result.size << result.id << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 10, 9.5, false, result.best_score, 2, 100);
 	optimized_write_output(G);
 	if (G.score < result.best_score) {
 		cout << "Found better score" << endl;
-	}
-}
-
-void specific_solve(Result &result) {
-	OptimizedGraph G;
-	short population_sz = 920;
-	cout << "Specifically solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
-	ch team_count, team_count_min;
-	if (result.size == "large") {
-		if (result.id == 134) {
-			team_count = max_teams(result.best_score);
-			team_count_min = 9;
-		} elif (result.id == 147) {
-			team_count = max_teams(result.best_score);
-			team_count_min = 9;
-		} elif (result.id == 61) {
-			team_count = max_teams(result.best_score);
-			team_count_min = 7;
-		} elif (result.id == 40) {
-			team_count = 8;
-			team_count_min = 7;
-		} elif (result.id == 215) {
-			team_count = 8;
-			team_count_min = 7;
-		} elif (result.id == 25) {
-			team_count = 3;
-			team_count_min = 3;
-		} elif (result.id == 32) {
-			team_count = 2;
-			team_count_min = 2;
-		} elif (result.id == 6) {
-			team_count = 3;
-			team_count_min = 2;
-		} elif (result.id == 185) {
-			cout << "Never mind" << endl << endl;
-			return;
-			team_count = 6;
-			team_count_min = 6;
-		} elif (result.id == 117) {
-			team_count = 4;
-			team_count_min = 2;
-		} else {
-			rigorous_solve(result, 0.0);
-			return;
-		}
-	} elif (result.size == "medium") {
-		rigorous_solve(result, 0.0);
-		return;
-	} else {
-		if (result.id == 21) {
-			team_count = 5;
-			team_count_min = 5;
-		} elif (result.id == 116) {
-			team_count = 5;
-			team_count_min = 5;
-		} else {
-			rigorous_solve(result, 0.0);
-			return;
-		}
-	}
-	ll previous_score = 1e18;
-	optimized_read_graph(G, result.size, result.id, "hopeless_dolly2");
-	while (team_count >= team_count_min) {
-		cout << "Trying " << (ll) team_count << " teams" << endl;
-		init_teams(G, team_count);
-		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, 0.0, 2, 100);
-		optimized_write_output(G);
-		if (G.score < result.best_score) {
-			cout << "Found better score" << endl;
-			break;
-		} elif (G.score > previous_score) {
-			cout << "Increase limit reached, terminating" << endl;
-			break;
-		}
-		cout << endl;
-		team_count--;
-		previous_score = G.score;
 	}
 }
 
@@ -441,7 +256,7 @@ int main() {
 			} elif (result.rank == 1 || result.notes == "sleeper") {
 				improve_existing(result);
 			} else {
-                specific_solve(result);
+				rigorous_solve(result, result.best_score);
 			}
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
