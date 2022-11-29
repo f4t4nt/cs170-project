@@ -252,8 +252,7 @@ else:
 best = (float('inf'), None)
 start = time.time()
 for _ in range(1000000):
-    for __ in range(20):
-        agents = batch_step(agents)
+    agents = batch_step(agents)
     agents = prune(agents)
     if agents[0].score < best[0]:
         best = (agents[0].score, agents[0].t)
