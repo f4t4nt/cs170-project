@@ -216,7 +216,9 @@ void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min
 		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 2, 100);
 		optimized_write_output(G);
 		if (G.score < target_score + 1e-9) {
-			cout << "Target score reached, terminating" << endl;
+			cout << "Target score reached" << endl;
+		} elif (G.score < result.local_score) {
+			cout << "Local score beat" << endl;
 		}
 		cout << endl;
 		if (G.score > previous_score) {
@@ -242,7 +244,9 @@ void rigorous_solve(Result &result, ld target_score) {
 		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 2, 100);
 		optimized_write_output(G);
 		if (G.score < target_score + 1e-9) {
-			cout << "Target score reached, terminating" << endl;
+			cout << "Target score reached" << endl;
+		} elif (G.score < result.local_score) {
+			cout << "Local score beat" << endl;
 		}
 		if (G.score > previous_score) {
 			increase_limit--;
@@ -278,6 +282,12 @@ int main() {
 			if (result.delta_score < 1e-9) {
 				continue;
 			} elif (result.rank == 1 || result.notes == "sleeper") {
+				improve_existing(result);
+			} elif (round(result.delta_score) == result.delta_score) {
+				improve_existing(result);
+			} elif (result.size == "large" && result.id == 11) {
+				improve_existing(result);
+			} elif (result.size == "small" && result.id == 113) {
 				improve_existing(result);
 			} elif (result.size == "medium" && result.id == 13) {
 				assume_team_range(result, result.best_score, 13, 13);
