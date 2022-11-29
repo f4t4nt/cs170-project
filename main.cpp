@@ -91,7 +91,7 @@ struct OptimizedAnnealingAgent {
 			return;
 		}
 		ld p = exp((G.score - new_score) / T);
-		if (rand() % 10000 < p * 10000) {
+		if (rand() < p * 32767) {
 			G.node_teams[node] = new_team;
 			G.team_counts[old_team]--;
 			G.team_counts[new_team]++;
@@ -137,8 +137,8 @@ struct OptimizedBlacksmithController {
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.995;
-		T_end *= 0.995;
+		T_start *= 0.993;
+		T_end *= 0.993;
 	}
 	void step_and_prune() {
 		step();
@@ -173,7 +173,7 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, l
 		if (i % 200 == 0) {
 			optimized_write_output(G);
 			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
-			if (previous_score == best_score || shepard.T_start < 1e-3) {
+			if (previous_score == best_score || shepard.T_start < 1e-2) {
 				stagnation++;
 				if (stagnation >= stagnation_limit) {
 					cout << "Stagnation limit reached, terminating" << endl;
@@ -195,23 +195,47 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, l
 			}
 			previous_score = best_score;
 		}
-        FOR (j, 9) {
-            shepard.step();
-        }
-        i += 9;
+		FOR (j, 9) {
+			shepard.step();
+		}
+		i += 9;
 	}
 	return G;
 }
 
+void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min = 2) {
+	OptimizedGraph G;
+	short population_sz = 2048;
+	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
+	ch team_count = team_max;
+	ld previous_score = INF;
+	optimized_read_graph(G, result.size, result.id, "rand_error");
+	while (team_count >= team_min) {
+		team_count = 13;
+		cout << "Trying " << (ll) team_count << " teams" << endl;
+		init_teams(G, team_count);
+		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 2, 100);
+		optimized_write_output(G);
+		if (G.score < target_score + 1e-9) {
+			cout << "Target score reached, terminating" << endl;
+		}
+		cout << endl;
+		if (G.score > previous_score) {
+			break;
+		}
+		team_count--;
+	}
+}
+
 void rigorous_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
-	short population_sz = 920;
+	short population_sz = 1024;
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
-	// optimized_read_graph(G, result.size, result.id, "sick2");
-	optimized_read_best_graph(G, result.size, result.id, "rand_error");
-    team_count = min((ch) (G.invariant->T + 1), team_count);
+	optimized_read_graph(G, result.size, result.id, "rand_error");
+	// optimized_read_best_graph(G, result.size, result.id, "rand_error");
+	// team_count = min((ch) (G.invariant->T + 1), team_count);
 	short increase_limit = 1;
 	while (team_count >= 2) {
 		cout << "Trying " << (ll) team_count << " teams" << endl;
@@ -220,7 +244,8 @@ void rigorous_solve(Result &result, ld target_score) {
 		optimized_write_output(G);
 		if (G.score < target_score + 1e-9) {
 			cout << "Target score reached, terminating" << endl;
-		} elif (G.score > previous_score) {
+		}
+		if (G.score > previous_score) {
 			increase_limit--;
 			if (increase_limit == 0) {
 				cout << "Increase limit reached, terminating" << endl;
@@ -235,13 +260,13 @@ void rigorous_solve(Result &result, ld target_score) {
 
 void improve_existing(Result &result) {
 	OptimizedGraph G;
-	short population_sz = 920;
+	short population_sz = 2048;
 	optimized_read_best_graph(G, result.size, result.id, "rand_error");
 	cout << "Improving " << result.size << result.id << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 10, 9.5, false, result.best_score, 2, 100);
 	optimized_write_output(G);
-	if (G.score < result.best_score) {
-		cout << "Found better score" << endl;
+	if (G.score <= result.best_score) {
+		cout << "Target score reached" << endl;
 	}
 }
 
@@ -254,6 +279,12 @@ int main() {
 			if (result.delta_score < 1e-9) {
 				continue;
 			} elif (result.rank == 1 || result.notes == "sleeper") {
+				improve_existing(result);
+			} elif (result.size == "medium" && result.id == 13) {
+				assume_team_range(result, result.best_score, 13, 13);
+			} elif (result.size == "medium" && result.id == 156) {
+				assume_team_range(result, result.best_score, 12, 12);
+			} elif (result.delta_score < 20) {
 				improve_existing(result);
 			} else {
 				rigorous_solve(result, result.best_score);
