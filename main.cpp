@@ -209,9 +209,8 @@ void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = team_max;
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "rand_error");
+	optimized_read_graph(G, result.size, result.id, "land");
 	while (team_count >= team_min) {
-		team_count = 13;
 		cout << "Trying " << (ll) team_count << " teams" << endl;
 		init_teams(G, team_count);
 		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 2, 100);
@@ -233,7 +232,7 @@ void rigorous_solve(Result &result, ld target_score) {
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "rand_error");
+	optimized_read_graph(G, result.size, result.id, "land");
 	// optimized_read_best_graph(G, result.size, result.id, "rand_error");
 	// team_count = min((ch) (G.invariant->T + 1), team_count);
 	short increase_limit = 1;
@@ -261,7 +260,7 @@ void rigorous_solve(Result &result, ld target_score) {
 void improve_existing(Result &result) {
 	OptimizedGraph G;
 	short population_sz = 2048;
-	optimized_read_best_graph(G, result.size, result.id, "rand_error");
+	optimized_read_best_graph(G, result.size, result.id, "land");
 	cout << "Improving " << result.size << result.id << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 10, 9.5, false, result.best_score, 2, 100);
 	optimized_write_output(G);
