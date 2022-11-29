@@ -36,41 +36,41 @@ for i in range(len(nodes)):
     else:
         busy_nodes.append((i, nodes[i]))
 
-team_count = 13
-# clustering based on polar coordinates (theta, phi)
-clusters = skc.KMeans(n_clusters=team_count).fit([[node[1].theta, node[1].phi] for node in busy_nodes]).labels_
-# clusters = skc.KMeans(n_clusters=team_count).fit([node[1].d for node in busy_nodes]).labels_
-counts = [0 for i in range(team_count)]
-for i in range(len(clusters)):
-    nodes[busy_nodes[i][0]].team = clusters[i]
-    counts[clusters[i]] += 1
+# team_count = 13
+# # clustering based on polar coordinates (theta, phi)
+# clusters = skc.KMeans(n_clusters=team_count).fit([[node[1].theta, node[1].phi] for node in busy_nodes]).labels_
+# # clusters = skc.KMeans(n_clusters=team_count).fit([node[1].d for node in busy_nodes]).labels_
+# counts = [0 for i in range(team_count)]
+# for i in range(len(clusters)):
+#     nodes[busy_nodes[i][0]].team = clusters[i]
+#     counts[clusters[i]] += 1
 
-for i in range(len(free_nodes)):
-    nodes[free_nodes[i][0]].team = counts.index(min(counts))
-    counts[nodes[free_nodes[i][0]].team] += 1
+# for i in range(len(free_nodes)):
+#     nodes[free_nodes[i][0]].team = counts.index(min(counts))
+#     counts[nodes[free_nodes[i][0]].team] += 1
 
-for i in range(len(nodes)):
-    nodes[i].team += 1
-    G.nodes[i]['team'] = nodes[i].team
+# for i in range(len(nodes)):
+#     nodes[i].team += 1
+#     G.nodes[i]['team'] = nodes[i].team
 
-# conflicts = []
-# for u, v, w in G.edges(data=True):
-#     if G.nodes[u]['team'] == G.nodes[v]['team']:
-#         conflicts.append((u, v, w))
+# # conflicts = []
+# # for u, v, w in G.edges(data=True):
+# #     if G.nodes[u]['team'] == G.nodes[v]['team']:
+# #         conflicts.append((u, v, w))
 
-print(f'Number of nodes: {len(nodes)}')
-print(f'Number of free nodes: {len(free_nodes)}')
-print(f'Team assignment: {[node.team for node in nodes]}')
-print(f'Number of nodes per team: {counts}')
-# print(f'Number of conflicts: {len(conflicts)}')
-# print(f'Conflicts: {conflicts}')
-print(f'Score: {score(G)}')
-print(f'Score separated: {score(G, separated=True)}')
+# print(f'Number of nodes: {len(nodes)}')
+# print(f'Number of free nodes: {len(free_nodes)}')
+# print(f'Team assignment: {[node.team for node in nodes]}')
+# print(f'Number of nodes per team: {counts}')
+# # print(f'Number of conflicts: {len(conflicts)}')
+# # print(f'Conflicts: {conflicts}')
+# print(f'Score: {score(G)}')
+# print(f'Score separated: {score(G, separated=True)}')
 
-# plt.hist(jnp.linalg.norm(final, axis=1), bins=100)
-# plt.show()
-# plt.hist([node.r for node in nodes], bins=100)
-# plt.show()
+plt.hist(jnp.linalg.norm(final, axis=1), bins=100)
+plt.show()
+plt.hist([node.r for node in nodes], bins=100)
+plt.show()
 
 # plt.hist([node.theta for node in nodes], bins=100)
 # plt.show()
