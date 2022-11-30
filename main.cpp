@@ -519,25 +519,7 @@ int main() {
 			if (result.delta_score < 1e-9) {
 				continue;
 			} elif (round(result.delta_score) == result.delta_score) {
-<<<<<<< HEAD
 				swap_solve(result, result.best_score);
-=======
-				improve_existing(result);
-			} elif (result.size == "large" && result.id == 32) {
-				assume_team_range(result, result.best_score, 2, 2);
-			} elif (result.size == "large" && result.id == 11) {
-				improve_existing(result);
-			} elif (result.size == "small" && result.id == 113) {
-				improve_existing(result);
-			} elif (result.size == "medium" && result.id == 13) {
-				assume_team_range(result, result.best_score, 13, 13);
-			} elif (result.size == "medium" && result.id == 156) {
-				assume_team_range(result, result.best_score, 12, 12);
-			} elif (result.delta_score < 20) {
-				improve_existing(result);
-			} else {
-				rigorous_solve(result, result.best_score);
->>>>>>> 860acec7157b887837627386c68bc11080d72eb9
 			}
 			// if (result.delta_score < 1e-9) {
 			// 	continue;
