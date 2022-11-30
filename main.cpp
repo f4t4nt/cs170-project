@@ -408,18 +408,17 @@ void find_swap_solve(Result &result, ld target_score) {
 	short population_sz = 2048;
 	optimized_read_graph(G, result.size, result.id, "focus_swap");
 	Gs = optimized_read_local_graphs(G, result.size, result.id, "focus_swap");
+	cout << "Rigorously find-swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ll idx = 0;
-	// find a graph with delta score an integer
 	while (idx < Gs.size() && Gs[idx].score - result.best_score != round(Gs[idx].score - result.best_score)) {
 		idx++;
 	}
 	if (idx == Gs.size()) {
-		cout << "No graph with integer delta score found" << endl;
+		cout << "No graph with integer delta score found, terminating" << endl;
 		return;
 	}
 	cout << "Found graph with integer delta score" << endl;
 	G = Gs[idx];
-	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, result.best_score, 1, 100, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
@@ -445,7 +444,7 @@ void improve_existing(Result &result) {
 }
 
 int main() {
-	// srand(time(NULL));
+	srand(time(NULL));
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	while (true) {
@@ -455,12 +454,13 @@ int main() {
 			} elif (round(result.delta_score) == result.delta_score) {
 				swap_solve(result, result.best_score);
 			} else {
-				continue;
+				find_swap_solve(result, result.best_score);
 			}
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
 		}
+		break;
 		cout << "Restarting" << endl << endl;
 	}
 	return 0;
