@@ -190,9 +190,19 @@ struct OptimizedBlacksmithSwapController {
 		population = vector<OptimizedAnnealingSwapAgent>(population_size);
 		T_start = T_start0;
 		T_end = T_end0;
-		if (randomize) {
+		if (randomize && find(G_in.team_counts.begin(), G_in.team_counts.end(), -1) != G_in.team_counts.end()) {
 			FOR (i, population_size) {
 				population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+				optimized_get_score(population[i].G);
+			}
+		} elif (randomize) {
+			FOR (i, population_size) {
+				population[i] = {G_in, 0};
+				FOR (_, 1000) {
+					short node1 = rand() % population[i].G.invariant->V;
+					short node2 = rand() % population[i].G.invariant->V;
+					swap(population[i].G.node_teams[node1], population[i].G.node_teams[node2]);
+				}
 				optimized_get_score(population[i].G);
 			}
 		} else {
@@ -215,8 +225,8 @@ struct OptimizedBlacksmithSwapController {
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.993;
-		T_end *= 0.993;
+		T_start *= 0.996;
+		T_end *= 0.996;
 	}
 	void step_and_prune() {
 		step();
@@ -321,10 +331,10 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, l
 				}
 				previous_score = best_score;
 			}
-			FOR (j, 9) {
+			FOR (j, 19) {
 				shepard.step();
 			}
-			i += 9;
+			i += 19;
 		}
 	}
 	return G;
@@ -419,7 +429,7 @@ void find_swap_solve(Result &result, ld target_score) {
 	}
 	cout << "Found graph with integer delta score" << endl;
 	G = Gs[idx];
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, result.best_score, 1, 100, true);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 100000, 1000, 950, true, result.best_score, 2, 100, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
@@ -460,7 +470,6 @@ int main() {
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
 		}
-		break;
 		cout << "Restarting" << endl << endl;
 	}
 	return 0;
