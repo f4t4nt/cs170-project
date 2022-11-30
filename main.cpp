@@ -190,7 +190,7 @@ struct OptimizedBlacksmithSwapController {
 		population = vector<OptimizedAnnealingSwapAgent>(population_size);
 		T_start = T_start0;
 		T_end = T_end0;
-		if (randomize && find(G_in.team_counts.begin(), G_in.team_counts.end(), -1) != G_in.team_counts.end()) {
+		if (randomize && find(G_in.team_sizes.begin(), G_in.team_sizes.end(), -1) != G_in.team_sizes.end()) {
 			FOR (i, population_size) {
 				population[i] = {optimized_random_assignment(G_in, team_count), T_start};
 				optimized_get_score(population[i].G);
