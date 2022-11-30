@@ -769,8 +769,8 @@ struct OptimizedShepardAgent {
 					new_team = rand() % T;
 				}
 				G.node_teams[node] = new_team;
-				G.team_counts[old_team]--;
-				G.team_counts[new_team]++;
+				G.team_sizes[old_team]--;
+				G.team_sizes[new_team]++;
 			}
 		} else {
 			FOB (node, start, V) {
@@ -780,8 +780,8 @@ struct OptimizedShepardAgent {
 					new_team = rand() % T;
 				}
 				G.node_teams[node] = new_team;
-				G.team_counts[old_team]--;
-				G.team_counts[new_team]++;
+				G.team_sizes[old_team]--;
+				G.team_sizes[new_team]++;
 			}
 			FOR (node, end) {
 				ch old_team = G.node_teams[node];
@@ -790,8 +790,8 @@ struct OptimizedShepardAgent {
 					new_team = rand() % T;
 				}
 				G.node_teams[node] = new_team;
-				G.team_counts[old_team]--;
-				G.team_counts[new_team]++;
+				G.team_sizes[old_team]--;
+				G.team_sizes[new_team]++;
 			}
 		}
 		optimized_get_score(G);
@@ -938,8 +938,8 @@ struct OptimizedAnnealingBatchAgent {
 		ld new_score = C_w + G.K + B;
 		if (new_score < G.score) {
 			G.node_teams[node] = new_team;
-			G.team_counts[old_team]--;
-			G.team_counts[new_team]++;
+			G.team_sizes[old_team]--;
+			G.team_sizes[new_team]++;
 			G.B_vec[old_team] = B_old;
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
@@ -950,8 +950,8 @@ struct OptimizedAnnealingBatchAgent {
 		ld p = exp((G.score - new_score) / T);
 		if (rand() % 1000000 < p * 1000000) {
 			G.node_teams[node] = new_team;
-			G.team_counts[old_team]--;
-			G.team_counts[new_team]++;
+			G.team_sizes[old_team]--;
+			G.team_sizes[new_team]++;
 			G.B_vec[old_team] = B_old;
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
@@ -983,7 +983,7 @@ struct OptimizedAnnealingBatchAgent {
 		}
 		FOR (i, G.invariant->T) {
 			if (team_pick_node[i] == 1) {
-				team_pick_node[i] = rand() % (short) G.team_counts[i];
+				team_pick_node[i] = rand() % (short) G.team_sizes[i];
 			}
 		}
 		vector<short> nodes;
@@ -1003,8 +1003,8 @@ struct OptimizedAnnealingBatchAgent {
 			FOR (i, batch_size) {
 				if (old_teams[i] != new_teams[i]) {
 					G.node_teams[nodes[i]] = new_teams[i];
-					G.team_counts[old_teams[i]]--;
-					G.team_counts[new_teams[i]]++;
+					G.team_sizes[old_teams[i]]--;
+					G.team_sizes[new_teams[i]]++;
 				}
 			}
 			G.C_w = C_w;
@@ -1016,8 +1016,8 @@ struct OptimizedAnnealingBatchAgent {
 			FOR (i, batch_size) {
 				if (old_teams[i] != new_teams[i]) {
 					G.node_teams[nodes[i]] = new_teams[i];
-					G.team_counts[old_teams[i]]--;
-					G.team_counts[new_teams[i]]++;
+					G.team_sizes[old_teams[i]]--;
+					G.team_sizes[new_teams[i]]++;
 				}
 			}
 			G.C_w = C_w;

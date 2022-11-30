@@ -30,7 +30,7 @@ OptimizedGraph optimized_coloring_threshold(OptimizedGraph G) {
 			} else {
 				team = possible_teams[0];
 				FOR (j, sz(possible_teams)) {
-					if (G_copy.team_counts[possible_teams[j]] < G_copy.team_counts[team]) {
+					if (G_copy.team_sizes[possible_teams[j]] < G_copy.team_sizes[team]) {
 						team = possible_teams[j];
 					}
 				}
@@ -38,10 +38,10 @@ OptimizedGraph optimized_coloring_threshold(OptimizedGraph G) {
 			G_copy.node_teams[i] = team;
 			if (team == G_copy.invariant->T) {
 				G_copy.invariant = G_copy.invariant->change_T(G_copy.invariant->T + 1);
-				G_copy.team_counts.pb(1);
+				G_copy.team_sizes.pb(1);
 				G_copy.B_vec.pb(0);
 			} else {
-				G_copy.team_counts[team]++;
+				G_copy.team_sizes[team]++;
 			}
 		}
 		optimized_get_score(G_copy);
@@ -57,7 +57,7 @@ OptimizedGraph optimized_random_assignment(OptimizedGraph &G_in, short team_coun
 	init_teams(G, team_count);
 	FOR (i, G.invariant->V) {
 		G.node_teams[i] = rand() % team_count;
-		G.team_counts[G.node_teams[i]]++;
+		G.team_sizes[G.node_teams[i]]++;
 	}
 	return G;
 }
@@ -81,8 +81,8 @@ struct OptimizedAnnealingAgent {
 		ld new_score = C_w + G.K + B;
 		if (new_score < G.score) {
 			G.node_teams[node] = new_team;
-			G.team_counts[old_team]--;
-			G.team_counts[new_team]++;
+			G.team_sizes[old_team]--;
+			G.team_sizes[new_team]++;
 			G.B_vec[old_team] = B_old;
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
@@ -93,8 +93,8 @@ struct OptimizedAnnealingAgent {
 		ld p = exp((G.score - new_score) / T);
 		if (rand() < p * 32767) {
 			G.node_teams[node] = new_team;
-			G.team_counts[old_team]--;
-			G.team_counts[new_team]++;
+			G.team_sizes[old_team]--;
+			G.team_sizes[new_team]++;
 			G.B_vec[old_team] = B_old;
 			G.B_vec[new_team] = B_new;
 			G.score = new_score;
@@ -336,7 +336,7 @@ void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = team_max;
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "land");
+	optimized_read_graph(G, result.size, result.id, "mindstorm");
 	while (team_count >= team_min) {
 		cout << "Trying " << (ll) team_count << " teams" << endl;
 		init_teams(G, team_count);
@@ -361,7 +361,7 @@ void rigorous_solve(Result &result, ld target_score) {
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "land");
+	optimized_read_graph(G, result.size, result.id, "mindstorm");
 	// optimized_read_best_graph(G, result.size, result.id, "rand_error");
 	// team_count = min((ch) (G.invariant->T + 1), team_count);
 	short increase_limit = 1;
@@ -391,9 +391,9 @@ void rigorous_solve(Result &result, ld target_score) {
 void swap_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
 	short population_sz = 2048;
-	optimized_read_best_graph(G, result.size, result.id, "swaps");
+	optimized_read_best_graph(G, result.size, result.id, "mindstorm");
 	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, result.best_score, 1, 100, true);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, target_score, 1, 100, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
@@ -406,20 +406,22 @@ void find_swap_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs;
 	OptimizedGraph G;
 	short population_sz = 2048;
-	optimized_read_graph(G, result.size, result.id, "focus_swap");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "focus_swap");
+	optimized_read_graph(G, result.size, result.id, "mindstorm");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "mindstorm");
 	cout << "Rigorously find-swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ll idx = 0;
-	while (idx < Gs.size() && Gs[idx].score - result.best_score != round(Gs[idx].score - result.best_score)) {
+	while (idx < Gs.size() && Gs[idx].score - target_score != round(Gs[idx].score - target_score)) {
 		idx++;
 	}
 	if (idx == Gs.size()) {
-		cout << "No graph with integer delta score found, terminating" << endl;
+		cout << "No graph with integer delta score found" << endl;
+		// find_distribution(target_score, G.invariant->V, 13);
+		rigorous_solve(result, target_score);
 		return;
 	}
 	cout << "Found graph with integer delta score" << endl;
 	G = Gs[idx];
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, result.best_score, 1, 100, true);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, target_score, 1, 100, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
@@ -430,8 +432,8 @@ void find_swap_solve(Result &result, ld target_score) {
 
 void improve_existing(Result &result) {
 	OptimizedGraph G;
-	short population_sz = 2048;
-	optimized_read_best_graph(G, result.size, result.id, "land");
+	short population_sz = 128;
+	optimized_read_best_graph(G, result.size, result.id, "mindstorm");
 	cout << "Improving " << result.size << result.id << " best score " << result.best_score << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
 	ld T_start = max((ld) 200, result.delta_score);
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, T_start, 0.95 * T_start, false, result.best_score, 2, 100);
@@ -449,8 +451,10 @@ int main() {
 	auto start = chrono::high_resolution_clock::now();
 	while (true) {
 		FORE (result, results) {
-			if (result.delta_score < 1e-9) {
+			if (abs(result.delta_score) < 1e-9) {
 				continue;
+			} elif (result.delta_score < 0) {
+				improve_existing(result);
 			} elif (round(result.delta_score) == result.delta_score) {
 				swap_solve(result, result.best_score);
 			} else {
