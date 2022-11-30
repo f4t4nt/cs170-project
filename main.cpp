@@ -105,6 +105,38 @@ struct OptimizedAnnealingAgent {
 	}
 };
 
+
+struct OptimizedAnnealingSwapAgent {
+	OptimizedGraph G;
+	ld T;
+	void init(const OptimizedGraph &G_in, ld T0) {
+		G = G_in;
+		T = T0;
+	}
+	void step() {
+		short node1 = rand() % G.invariant->V;
+		short node2 = rand() % G.invariant->V;
+		while (node1 == node2 || G.node_teams[node1] == G.node_teams[node2]) {
+			node2 = rand() % G.invariant->V;
+		}
+		ld C_w = optimized_update_swap_score(G, node1, node2);
+		ld new_score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
+		if (new_score < G.score) {
+			swap(G.node_teams[node1], G.node_teams[node2]);
+			G.score = new_score;
+			G.C_w = C_w;
+			return;
+		}
+		ld p = exp((G.score - new_score) / T);
+		if (rand() < p * 32767) {
+			swap(G.node_teams[node1], G.node_teams[node2]);
+			G.score = new_score;
+			G.C_w = C_w;
+			return;
+		}
+	}
+};
+
 struct OptimizedBlacksmithController {
 	vector<OptimizedAnnealingAgent> population;
 	ld T_start, T_end;
@@ -118,7 +150,7 @@ struct OptimizedBlacksmithController {
 				optimized_get_score(population[i].G);
 			}
 		} else {
-			ll score = optimized_get_score(G_in);
+			optimized_get_score(G_in);
 			FOR (i, population_size) {
 				population[i] = {G_in, T_start};
 			}
@@ -151,54 +183,149 @@ struct OptimizedBlacksmithController {
 	}
 };
 
-OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = true, ld target_score = 0, short stagnation_limit = 1, ld ignition_factor = 1.1) {
-	G.score = INF;
-	OptimizedBlacksmithController shepard;
-	shepard.init(G, team_count, population_size, T_start0, T_end0, randomize);
-	FOR (i, 50) {
-		shepard.step();
+struct OptimizedBlacksmithSwapController {
+	vector<OptimizedAnnealingSwapAgent> population;
+	ld T_start, T_end;
+	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld T_start0, ld T_end0, bool randomize = true) {
+		population = vector<OptimizedAnnealingSwapAgent>(population_size);
+		T_start = T_start0;
+		T_end = T_end0;
+		if (randomize) {
+			FOR (i, population_size) {
+				population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+				optimized_get_score(population[i].G);
+			}
+		} else {
+			optimized_get_score(G_in);
+			FOR (i, population_size) {
+				population[i] = {G_in, T_start};
+			}
+		}
 	}
+	void step() {
+		auto population_size = sz(population);
+		#pragma omp parallel for
+		for (size_t i = 0; i < population_size; i++) {
+			auto &agent = population[i];
+			agent.T = T_start;
+			while (agent.T > T_end) {
+				FOR (j, 500) {
+					agent.step();
+				}
+				agent.T *= 0.999;
+			}
+		}
+		T_start *= 0.993;
+		T_end *= 0.993;
+	}
+	void step_and_prune() {
+		step();
+		sort(all(population), [](OptimizedAnnealingSwapAgent &a, OptimizedAnnealingSwapAgent &b) {
+			return a.G.score < b.G.score;
+		});
+		FOR (i, sz(population) / 2) {
+			population[i + sz(population) / 2] = population[i];
+		}
+	}
+};
+
+OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = true, ld target_score = 0, short stagnation_limit = 1, ld ignition_factor = 1.1, bool swaps = false) {
+	G.score = INF;
 	bool extended = true;
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
-	FOR (i, generations) {
-		shepard.step_and_prune();
-		auto population_best = shepard.population[0].G;
-		if (population_best.score < best_score) {
-			best_score = population_best.score;
-			if (population_best.score < G.score) {
-				G = population_best;
-			}
-		}
-		if (i % 200 == 0) {
-			optimized_write_output(G);
-			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
-			if (previous_score == best_score || shepard.T_start < 1e-2) {
-				stagnation++;
-				if (stagnation >= stagnation_limit) {
-					cout << "Stagnation limit reached, terminating" << endl;
-					break;
-				}
-				if (shepard.T_start < T_start0 / ignition_factor) {
-					shepard.T_start *= ignition_factor;
-					shepard.T_end *= ignition_factor;
-					cout << "Reigniting, temperature set to " << shepard.T_start << endl;
-				} else {
-					shepard.init(G, team_count, population_size, T_start0, T_end0);
-					cout << "Ionizing" << endl;
-				}
-				best_score = 1e18;
-			}
-			if (G.score <= target_score && extended) {
-				stagnation_limit++;
-				extended = false;
-			}
-			previous_score = best_score;
-		}
-		FOR (j, 9) {
+	if (!swaps) {
+		cout << "Regular solve confirmed" << endl;
+		OptimizedBlacksmithController shepard;
+		shepard.init(G, team_count, population_size, T_start0, T_end0, randomize);
+		FOR (i, 50) {
 			shepard.step();
 		}
-		i += 9;
+		FOR (i, generations) {
+			shepard.step_and_prune();
+			auto population_best = shepard.population[0].G;
+			if (population_best.score < best_score) {
+				best_score = population_best.score;
+				if (population_best.score < G.score) {
+					G = population_best;
+				}
+			}
+			if (i % 200 == 0) {
+				optimized_write_output(G);
+				cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
+				if (previous_score == best_score || shepard.T_start < 1e-2) {
+					stagnation++;
+					if (stagnation >= stagnation_limit) {
+						cout << "Stagnation limit reached, terminating" << endl;
+						break;
+					}
+					if (shepard.T_start < T_start0 / ignition_factor) {
+						shepard.T_start *= ignition_factor;
+						shepard.T_end *= ignition_factor;
+						cout << "Reigniting, temperature set to " << shepard.T_start << endl;
+					} else {
+						shepard.init(G, team_count, population_size, T_start0, T_end0);
+						cout << "Ionizing" << endl;
+					}
+					best_score = 1e18;
+				}
+				if (G.score <= target_score && extended) {
+					stagnation_limit++;
+					extended = false;
+				}
+				previous_score = best_score;
+			}
+			FOR (j, 9) {
+				shepard.step();
+			}
+			i += 9;
+		}
+	} else {
+		cout << "Swap solve confirmed" << endl;
+		OptimizedBlacksmithSwapController shepard;
+		shepard.init(G, team_count, population_size, T_start0, T_end0, randomize);
+		FOR (i, 50) {
+			shepard.step();
+		}
+		FOR (i, generations) {
+			shepard.step_and_prune();
+			auto population_best = shepard.population[0].G;
+			if (population_best.score < best_score) {
+				best_score = population_best.score;
+				if (population_best.score < G.score) {
+					G = population_best;
+				}
+			}
+			if (i % 200 == 0) {
+				optimized_write_output(G);
+				cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
+				if (previous_score == best_score || shepard.T_start < 1e-2) {
+					stagnation++;
+					if (stagnation >= stagnation_limit) {
+						cout << "Stagnation limit reached, terminating" << endl;
+						break;
+					}
+					if (shepard.T_start < T_start0 / ignition_factor) {
+						shepard.T_start *= ignition_factor;
+						shepard.T_end *= ignition_factor;
+						cout << "Reigniting, temperature set to " << shepard.T_start << endl;
+					} else {
+						shepard.init(G, team_count, population_size, T_start0, T_end0);
+						cout << "Ionizing" << endl;
+					}
+					best_score = 1e18;
+				}
+				if (G.score <= target_score && extended) {
+					stagnation_limit++;
+					extended = false;
+				}
+				previous_score = best_score;
+			}
+			FOR (j, 9) {
+				shepard.step();
+			}
+			i += 9;
+		}
 	}
 	return G;
 }
@@ -261,6 +388,18 @@ void rigorous_solve(Result &result, ld target_score) {
 	}
 }
 
+void swap_solve(Result &result, ld target_score) {
+	OptimizedGraph G;
+	short population_sz = 2048;
+	optimized_read_best_graph(G, result.size, result.id, "swaps");
+	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, result.best_score, 1, 100, true);
+	optimized_write_output(G);
+	if (G.score <= result.best_score) {
+		cout << "Target score reached" << endl;
+	}
+}
+
 void improve_existing(Result &result) {
 	OptimizedGraph G;
 	short population_sz = 2048;
@@ -276,33 +415,131 @@ void improve_existing(Result &result) {
 	}
 }
 
+vector<short> make_component(short node, ch team_count, OptimizedGraph G, short V, vector<bool> &visited) {
+	vector<bool> used(V);
+	vector<short> component;
+	auto &weights = G.invariant->weights;
+	component.pb(node);
+	while (sz(component) < team_count) {
+		short best_node = -1;
+		ll best_weight = 0;
+		FOR (i, V) {
+			if (used[i] || visited[i]) {
+				continue;
+			}
+			ll weight = 0;
+			FOR (j, sz(component)) {
+				weight += weights[component[j]][i];
+			}
+			if (weight > best_weight) {
+				best_weight = weight;
+				best_node = i;
+			}
+		}
+		if (best_node == -1) {
+			break;
+		}
+		used[best_node] = true;
+		component.pb(best_node);
+	}
+	FOR (i, sz(component)) {
+		visited[component[i]] = true;
+	}
+	return component;
+}
+
+void alt_solve(Result &result) {
+	OptimizedGraph G;
+	optimized_read_graph(G, result.size, result.id, "land");
+	short V = G.invariant->V;
+	G.score = INF;
+	ch team_count = 8;
+	vector<pair<short, short>> node_weights(V);
+	FOR (i, G.invariant->V) {
+		node_weights[i] = {0, i};
+	}
+	auto &edges = G.invariant->edges;
+	FORE (edge, edges) {
+		node_weights[get<0>(edge)].first += get<2>(edge);
+	}
+	rsort(node_weights);
+	vector<bool> visited(V);
+	vector<vector<short>> components;
+	short i = 0;
+	while (i < V) {
+		if (visited[node_weights[i].second]) {
+			i++;
+			continue;
+		}
+		vector<short> component = make_component(node_weights[i].second, team_count, G, V, visited);
+		components.pb(component);
+	}
+	FOR (j, sz(components[0])) {
+		G.node_teams[components[0][j]] = j;
+	}
+	i = 1;
+	auto &weights = G.invariant->weights;
+	while (i < sz(components)) {
+		// find the ordering of [1, 2, ..., sz(components[i]) - 1] that minimizes the score
+		vector<short> best_ordering;
+		ll best_score = INF;
+		vector<short> ordering;
+		FOR (j, sz(components[i])) {
+			ordering.pb(j);
+		}
+		do {
+			ll score = 0;
+			FOR (j, sz(ordering)) {
+				FOR (k, V) {
+					if (G.node_teams[k] == ordering[j]) {
+						score += weights[components[i][j]][k];
+					}
+				}
+			}
+			if (score < best_score) {
+				best_score = score;
+				best_ordering = ordering;
+			}
+		} while (next_permutation(all(ordering)));
+		FOR (j, sz(best_ordering)) {
+			G.node_teams[components[i][best_ordering[j]]] = j;
+		}
+		i++;
+	}
+	optimized_get_score(G);
+	optimized_write_output(G);
+}
+
 int main() {
-	srand(time(NULL));
+	// srand(time(NULL));
 	vector<Result> results = read_queue();
 	auto start = chrono::high_resolution_clock::now();
 	while (true) {
 		FORE (result, results) {
 			if (result.delta_score < 1e-9) {
 				continue;
-			} elif (result.rank == 1 || result.notes == "sleeper") {
-				improve_existing(result);
 			} elif (round(result.delta_score) == result.delta_score) {
-				improve_existing(result);
-			} elif (result.size == "large" && result.id == 32) {
-				assume_team_range(result, result.best_score, 2, 2);
-			} elif (result.size == "large" && result.id == 11) {
-				improve_existing(result);
-			} elif (result.size == "small" && result.id == 113) {
-				improve_existing(result);
-			} elif (result.size == "medium" && result.id == 13) {
-				assume_team_range(result, result.best_score, 13, 13);
-			} elif (result.size == "medium" && result.id == 156) {
-				assume_team_range(result, result.best_score, 12, 12);
-			} elif (result.delta_score < 20) {
-				improve_existing(result);
-			} else {
-				rigorous_solve(result, result.best_score);
+				swap_solve(result, result.best_score);
 			}
+			// if (result.delta_score < 1e-9) {
+			// 	continue;
+			// } elif (result.rank == 1 || result.notes == "sleeper") {
+			// 	improve_existing(result);
+			// } elif (round(result.delta_score) == result.delta_score) {
+			// 	improve_existing(result);
+			// } elif (result.size == "large" && result.id == 11) {
+			// 	improve_existing(result);
+			// } elif (result.size == "small" && result.id == 113) {
+			// 	improve_existing(result);
+			// } elif (result.size == "medium" && result.id == 13) {
+			// 	assume_team_range(result, result.best_score, 13, 13);
+			// } elif (result.size == "medium" && result.id == 156) {
+			// 	assume_team_range(result, result.best_score, 12, 12);
+			// } elif (result.delta_score < 20) {
+			// 	improve_existing(result);
+			// } else {
+			// 	rigorous_solve(result, result.best_score);
+			// }
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
