@@ -397,6 +397,35 @@ void swap_solve(Result &result, ld target_score) {
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
+	} elif (G.score < result.local_score) {
+		cout << "Local score beat" << endl;
+	}
+}
+
+void find_swap_solve(Result &result, ld target_score) {
+	vector<OptimizedGraph> Gs;
+	OptimizedGraph G;
+	short population_sz = 2048;
+	optimized_read_graph(G, result.size, result.id, "focus_swap");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "focus_swap");
+	ll idx = 0;
+	// find a graph with delta score an integer
+	while (idx < Gs.size() && Gs[idx].score - result.best_score != round(Gs[idx].score - result.best_score)) {
+		idx++;
+	}
+	if (idx == Gs.size()) {
+		cout << "No graph with integer delta score found" << endl;
+		return;
+	}
+	cout << "Found graph with integer delta score" << endl;
+	G = Gs[idx];
+	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, result.best_score, 1, 100, true);
+	optimized_write_output(G);
+	if (G.score <= result.best_score) {
+		cout << "Target score reached" << endl;
+	} elif (G.score < result.local_score) {
+		cout << "Local score beat" << endl;
 	}
 }
 
@@ -415,101 +444,6 @@ void improve_existing(Result &result) {
 	}
 }
 
-vector<short> make_component(short node, ch team_count, OptimizedGraph G, short V, vector<bool> &visited) {
-	vector<bool> used(V);
-	vector<short> component;
-	auto &weights = G.invariant->weights;
-	component.pb(node);
-	while (sz(component) < team_count) {
-		short best_node = -1;
-		ll best_weight = 0;
-		FOR (i, V) {
-			if (used[i] || visited[i]) {
-				continue;
-			}
-			ll weight = 0;
-			FOR (j, sz(component)) {
-				weight += weights[component[j]][i];
-			}
-			if (weight > best_weight) {
-				best_weight = weight;
-				best_node = i;
-			}
-		}
-		if (best_node == -1) {
-			break;
-		}
-		used[best_node] = true;
-		component.pb(best_node);
-	}
-	FOR (i, sz(component)) {
-		visited[component[i]] = true;
-	}
-	return component;
-}
-
-void alt_solve(Result &result) {
-	OptimizedGraph G;
-	optimized_read_graph(G, result.size, result.id, "land");
-	short V = G.invariant->V;
-	G.score = INF;
-	ch team_count = 8;
-	vector<pair<short, short>> node_weights(V);
-	FOR (i, G.invariant->V) {
-		node_weights[i] = {0, i};
-	}
-	auto &edges = G.invariant->edges;
-	FORE (edge, edges) {
-		node_weights[get<0>(edge)].first += get<2>(edge);
-	}
-	rsort(node_weights);
-	vector<bool> visited(V);
-	vector<vector<short>> components;
-	short i = 0;
-	while (i < V) {
-		if (visited[node_weights[i].second]) {
-			i++;
-			continue;
-		}
-		vector<short> component = make_component(node_weights[i].second, team_count, G, V, visited);
-		components.pb(component);
-	}
-	FOR (j, sz(components[0])) {
-		G.node_teams[components[0][j]] = j;
-	}
-	i = 1;
-	auto &weights = G.invariant->weights;
-	while (i < sz(components)) {
-		// find the ordering of [1, 2, ..., sz(components[i]) - 1] that minimizes the score
-		vector<short> best_ordering;
-		ll best_score = INF;
-		vector<short> ordering;
-		FOR (j, sz(components[i])) {
-			ordering.pb(j);
-		}
-		do {
-			ll score = 0;
-			FOR (j, sz(ordering)) {
-				FOR (k, V) {
-					if (G.node_teams[k] == ordering[j]) {
-						score += weights[components[i][j]][k];
-					}
-				}
-			}
-			if (score < best_score) {
-				best_score = score;
-				best_ordering = ordering;
-			}
-		} while (next_permutation(all(ordering)));
-		FOR (j, sz(best_ordering)) {
-			G.node_teams[components[i][best_ordering[j]]] = j;
-		}
-		i++;
-	}
-	optimized_get_score(G);
-	optimized_write_output(G);
-}
-
 int main() {
 	// srand(time(NULL));
 	vector<Result> results = read_queue();
@@ -520,26 +454,9 @@ int main() {
 				continue;
 			} elif (round(result.delta_score) == result.delta_score) {
 				swap_solve(result, result.best_score);
+			} else {
+				continue;
 			}
-			// if (result.delta_score < 1e-9) {
-			// 	continue;
-			// } elif (result.rank == 1 || result.notes == "sleeper") {
-			// 	improve_existing(result);
-			// } elif (round(result.delta_score) == result.delta_score) {
-			// 	improve_existing(result);
-			// } elif (result.size == "large" && result.id == 11) {
-			// 	improve_existing(result);
-			// } elif (result.size == "small" && result.id == 113) {
-			// 	improve_existing(result);
-			// } elif (result.size == "medium" && result.id == 13) {
-			// 	assume_team_range(result, result.best_score, 13, 13);
-			// } elif (result.size == "medium" && result.id == 156) {
-			// 	assume_team_range(result, result.best_score, 12, 12);
-			// } elif (result.delta_score < 20) {
-			// 	improve_existing(result);
-			// } else {
-			// 	rigorous_solve(result, result.best_score);
-			// }
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;

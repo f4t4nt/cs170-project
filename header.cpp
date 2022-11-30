@@ -474,6 +474,31 @@ void optimized_read_best_graph(OptimizedGraph &G, str test_sz, ll test_id, str r
 	optimized_read_teams(G, best_team_file_name);
 }
 
+vector<OptimizedGraph> optimized_read_local_graphs(OptimizedGraph &G, str test_sz, ll test_id, str run_type = "") {
+	vector<OptimizedGraph> local_graphs;
+	for (const auto & entry : filesystem::directory_iterator("tests/" + test_sz + "/" + test_sz + to_string(test_id) + "/")) {
+		filesystem::path team_file;
+		team_file = entry.path();
+		if (team_file.extension() != ".out") {
+			continue;
+		}
+		str team_file_name = team_file.filename().string();
+		team_file_name = team_file_name.substr(0, team_file_name.find("."));
+		if (team_file_name.find("_") == string::npos) {
+			cout << "Unlabeled team file: " << test_sz << test_id << "/" << team_file_name << endl;
+			continue;
+		}
+		OptimizedGraph local_graph = G;
+		optimized_read_teams(local_graph, team_file_name);
+		optimized_get_score(local_graph);
+		local_graphs.pb(local_graph);
+	}
+	sort(all(local_graphs), [](OptimizedGraph &a, OptimizedGraph &b) {
+		return a.score < b.score;
+	});
+	return local_graphs;
+}
+
 ld get_own_score(str test_sz, str test_id) {
 	ll best_score = -1;
 	for (const auto & entry : filesystem::directory_iterator("tests/" + test_sz + "/" + test_sz + test_id + "/")) {
