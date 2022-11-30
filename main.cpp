@@ -404,11 +404,14 @@ void improve_existing(Result &result) {
 	OptimizedGraph G;
 	short population_sz = 2048;
 	optimized_read_best_graph(G, result.size, result.id, "land");
-	cout << "Improving " << result.size << result.id << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 10, 9.5, false, result.best_score, 2, 100);
+	cout << "Improving " << result.size << result.id << " best score " << result.best_score << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
+	ld T_start = max((ld) 200, result.delta_score);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, T_start, 0.95 * T_start, false, result.best_score, 2, 100);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
+	} elif (G.score < result.local_score) {
+		cout << "Local score beat" << endl;
 	}
 }
 
@@ -516,7 +519,25 @@ int main() {
 			if (result.delta_score < 1e-9) {
 				continue;
 			} elif (round(result.delta_score) == result.delta_score) {
+<<<<<<< HEAD
 				swap_solve(result, result.best_score);
+=======
+				improve_existing(result);
+			} elif (result.size == "large" && result.id == 32) {
+				assume_team_range(result, result.best_score, 2, 2);
+			} elif (result.size == "large" && result.id == 11) {
+				improve_existing(result);
+			} elif (result.size == "small" && result.id == 113) {
+				improve_existing(result);
+			} elif (result.size == "medium" && result.id == 13) {
+				assume_team_range(result, result.best_score, 13, 13);
+			} elif (result.size == "medium" && result.id == 156) {
+				assume_team_range(result, result.best_score, 12, 12);
+			} elif (result.delta_score < 20) {
+				improve_existing(result);
+			} else {
+				rigorous_solve(result, result.best_score);
+>>>>>>> 860acec7157b887837627386c68bc11080d72eb9
 			}
 			// if (result.delta_score < 1e-9) {
 			// 	continue;
