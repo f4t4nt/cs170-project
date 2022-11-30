@@ -80,6 +80,11 @@ struct DSU {
 		e[x] += e[y]; e[y] = x;
 		return true;
 	}
+	vector<ll> get_set(ll x) {
+		vector<ll> res;
+		FOR(i, e.size()) if (get(i) == get(x)) res.pb(i);
+		return res;
+	}
 };
 
 struct Node {
@@ -193,14 +198,12 @@ ld optimized_get_score(OptimizedGraph &G) {
 			G.C_w += weight;
 		}
 	}
-
 	G.C_w /= 2;
 	G.B_norm_squared = 0;
 	FOR (i, G.invariant->T) {
 		G.B_vec[i] = G.team_counts[i] / (ld) G.invariant->V - 1.0 / G.invariant->T;
 		G.B_norm_squared += G.B_vec[i] * G.B_vec[i];
 	}
-
 	G.score = G.C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
 	return G.score;
 }
@@ -250,6 +253,44 @@ ld optimized_update_score_batch_swaps(OptimizedGraph &G, vector<short> &nodes, v
 				i++;
 			}
 		}
+	}
+	return C_w;
+}
+
+ld optimized_update_swap_score(OptimizedGraph &G, short node1, short node2) {
+	ld C_w = G.C_w;
+	auto &edges = G.invariant->edges;
+	short i = G.invariant->edge_indices[node1], end = (node1 == G.invariant->V - 1 ? 2 * G.invariant->E : G.invariant->edge_indices[node1 + 1]);
+	while (i < end) {
+		short target, weight;
+		tie(ignore, target, weight) = edges[i];
+		if (target == node2) {
+			i++;
+			continue;
+		}
+		auto target_team = G.node_teams[target];
+		if (target_team == G.node_teams[node1]) {
+			C_w -= weight;
+		} elif (target_team == G.node_teams[node2]) {
+			C_w += weight;
+		}
+		i++;
+	}
+	i = G.invariant->edge_indices[node2], end = (node2 == G.invariant->V - 1 ? 2 * G.invariant->E : G.invariant->edge_indices[node2 + 1]);
+	while (i < end) {
+		short target, weight;
+		tie(ignore, target, weight) = edges[i];
+		if (target == node1) {
+			i++;
+			continue;
+		}
+		auto target_team = G.node_teams[target];
+		if (target_team == G.node_teams[node2]) {
+			C_w -= weight;
+		} elif (target_team == G.node_teams[node1]) {
+			C_w += weight;
+		}
+		i++;
 	}
 	return C_w;
 }
