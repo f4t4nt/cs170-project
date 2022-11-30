@@ -140,7 +140,7 @@ struct OptimizedGraph {
 	ld C_w, K, B_norm_squared;
 	vector<ld> B_vec;
 	vector<ch> node_teams;
-	vector<short> team_counts;
+	vector<short> team_sizes;
 };
 
 struct Result {
@@ -201,7 +201,7 @@ ld optimized_get_score(OptimizedGraph &G) {
 	G.C_w /= 2;
 	G.B_norm_squared = 0;
 	FOR (i, G.invariant->T) {
-		G.B_vec[i] = G.team_counts[i] / (ld) G.invariant->V - 1.0 / G.invariant->T;
+		G.B_vec[i] = G.team_sizes[i] / (ld) G.invariant->V - 1.0 / G.invariant->T;
 		G.B_norm_squared += G.B_vec[i] * G.B_vec[i];
 	}
 	G.score = G.C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
@@ -302,23 +302,23 @@ void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
 			ch old_team = a.node_teams[node];
 			ch new_team = b.node_teams[node];
 			a.node_teams[node] = new_team;
-			a.team_counts[old_team]--;
-			a.team_counts[new_team]++;
+			a.team_sizes[old_team]--;
+			a.team_sizes[new_team]++;
 		}
 	} else {
 		FOB (node, start, a.invariant->V) {
 			ch old_team = a.node_teams[node];
 			ch new_team = b.node_teams[node];
 			a.node_teams[node] = new_team;
-			a.team_counts[old_team]--;
-			a.team_counts[new_team]++;
+			a.team_sizes[old_team]--;
+			a.team_sizes[new_team]++;
 		}
 		FOR (node, end) {
 			ch old_team = a.node_teams[node];
 			ch new_team = b.node_teams[node];
 			a.node_teams[node] = new_team;
-			a.team_counts[old_team]--;
-			a.team_counts[new_team]++;
+			a.team_sizes[old_team]--;
+			a.team_sizes[new_team]++;
 		}
 	}
 	optimized_get_score(a);
@@ -383,7 +383,7 @@ void init_teams(OptimizedGraph &G, short T) {
 	auto last_invariant = G.invariant;
 	G.invariant = last_invariant->change_T(T);
 	G.node_teams = vector<ch>(G.invariant->V, -1);
-	G.team_counts = vector<short>(G.invariant->T, 0);
+	G.team_sizes = vector<short>(G.invariant->T, 0);
 	G.C_w = 0.0;
 	G.K = K_COEFFICIENT * exp(K_EXP * G.invariant->T);
 	G.B_vec = vector<ld>(G.invariant->T, 0.0);
@@ -420,7 +420,7 @@ void optimized_read_teams(OptimizedGraph &G, str file) {
 	init_teams(G, T);
 	FOR (i, sz(teams_json)) {
 		G.node_teams[i] = (ch) (teams_json[i] - 1);
-		G.team_counts[G.node_teams[i]]++;
+		G.team_sizes[G.node_teams[i]]++;
 	}
 }
 
@@ -581,6 +581,16 @@ ch max_teams(ld score) {
 	return (ch) floor(log(score / K_COEFFICIENT) / K_EXP);
 }
 
+ld distribution_score(vector<short> team_size_counts, short V, ch team_count) {
+	ld score = 0;
+	FOR (i, sz(team_size_counts)) {
+		ld tmp = (ld) i / V - 1.0 / team_count;
+		score += team_size_counts[i] * tmp * tmp;
+	}
+	score = exp(B_EXP * sqrt(score));
+	return score;
+}
+
 ll weighted_random(vector<ld> &weights, ll range = 0) {
 	ld total = 0;
 	FOB (i, range, sz(weights)) {
@@ -596,6 +606,59 @@ ll weighted_random(vector<ld> &weights, ll range = 0) {
 	}
 	assert(false);
 	return -1;
+}
+
+vector<short> find_distribution(ld &target_score, short V, ch team_count) {
+	ld K = K_COEFFICIENT * exp(K_EXP * team_count);
+	target_score -= K;
+	target_score -= floor(target_score);
+	vector<short> team_size_counts(V + 1);
+	ld avg_team_size = V / (ld) team_count;
+	short avg_team_size_short = (short) avg_team_size;
+	short remaining = V - avg_team_size_short * team_count;
+	FOR (i, remaining) {
+		team_size_counts[avg_team_size_short + 1]++;
+	}
+	FOR (i, team_count - remaining) {
+		team_size_counts[avg_team_size_short]++;
+	}
+	ld score = distribution_score(team_size_counts, V, team_count);
+	while (score - floor(score) != target_score) {
+		// do {
+		// 	i = rand() % V + 1;
+		// } while (team_size_counts[i] == 0);
+		// team_size_counts[i]--;
+		// team_size_counts[i - 1]++;
+		// do {
+		// 	j = rand() % V;
+		// } while (team_size_counts[j] == 0);
+		// team_size_counts[j]--;
+		// team_size_counts[j + 1]++;
+		// make avg values of i and j be more likely to be chosen
+		vector<ld> weights(V + 1);
+		FOR (k, sz(weights)) {
+			if (team_size_counts[k] > 0) {
+				weights[k] = 1.0 / (abs((ld) k - avg_team_size) + 1) * team_size_counts[k];
+			}
+		}
+		ll i = weighted_random(weights);
+		team_size_counts[i]--;
+		team_size_counts[i - 1]++;
+		if (team_size_counts[i] == 0) {
+			weights[i] = 0;
+		}
+		ll j = weighted_random(weights);
+		team_size_counts[j]--;
+		team_size_counts[j + 1]++;
+		score = distribution_score(team_size_counts, V, team_count);
+	}
+	vector<short> team_sizes;
+	FOR (i, sz(team_size_counts)) {
+		FOR (j, team_size_counts[i]) {
+			team_sizes.pb(i);
+		}
+	}
+	return team_sizes;
 }
 
 bool vec_eq(vector<char> &a, vector<char> &b) {
