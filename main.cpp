@@ -169,8 +169,8 @@ struct OptimizedBlacksmithController {
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.993;
-		T_end *= 0.993;
+		T_start *= 0.999;
+		T_end *= 0.999;
 	}
 	void step_and_prune() {
 		step();
@@ -225,8 +225,8 @@ struct OptimizedBlacksmithSwapController {
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.996;
-		T_end *= 0.996;
+		T_start *= 0.9;
+		T_end *= 0.9;
 	}
 	void step_and_prune() {
 		step();
@@ -285,10 +285,10 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, l
 				}
 				previous_score = best_score;
 			}
-			FOR (j, 9) {
+			FOR (j, 19) {
 				shepard.step();
 			}
-			i += 9;
+			i += 19;
 		}
 	} else {
 		cout << "Swap solve confirmed" << endl;
@@ -346,11 +346,11 @@ void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = team_max;
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "mindstorm1");
+	optimized_read_graph(G, result.size, result.id, "mindstormX");
 	while (team_count >= team_min) {
 		cout << "Trying " << (ll) team_count << " teams" << endl;
 		init_teams(G, team_count);
-		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 2, 100);
+		G = optimized_annealing_algorithm(G, team_count, population_sz, 30000, 1000, 950, true, target_score, 2, 100);
 		optimized_write_output(G);
 		if (G.score < target_score + 1e-9) {
 			cout << "Target score reached" << endl;
@@ -371,14 +371,14 @@ void rigorous_solve(Result &result, ld target_score) {
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "mindstorm1");
-	// optimized_read_best_graph(G, result.size, result.id, "rand_error");
-	// team_count = min((ch) (G.invariant->T + 1), team_count);
+	// optimized_read_graph(G, result.size, result.id, "mindstormX");
+	optimized_read_best_graph(G, result.size, result.id, "mindstormX");
+	team_count = min((ch) (G.invariant->T + 1), team_count);
 	short increase_limit = 1;
 	while (team_count >= 2) {
 		cout << "Trying " << (ll) team_count << " teams" << endl;
 		init_teams(G, team_count);
-		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 2, 100);
+		G = optimized_annealing_algorithm(G, team_count, population_sz, 30000, 1000, 950, true, target_score, 3, 500);
 		optimized_write_output(G);
 		if (G.score < target_score + 1e-9) {
 			cout << "Target score reached" << endl;
@@ -401,9 +401,9 @@ void rigorous_solve(Result &result, ld target_score) {
 void swap_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
 	short population_sz = 512;
-	optimized_read_best_graph(G, result.size, result.id, "mindstorm1");
+	optimized_read_best_graph(G, result.size, result.id, "mindstormX");
 	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, target_score, 1, 100, true);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 30000, 100, 95, false, target_score, 1, 100, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
@@ -416,8 +416,8 @@ void find_swap_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs;
 	OptimizedGraph G;
 	short population_sz = 2048;
-	optimized_read_graph(G, result.size, result.id, "mindstorm1");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "mindstorm1");
+	optimized_read_graph(G, result.size, result.id, "mindstormX");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "mindstormX");
 	cout << "Rigorously find-swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ll idx = 0;
 	while (idx < Gs.size() && Gs[idx].score - target_score != round(Gs[idx].score - target_score)) {
@@ -426,12 +426,12 @@ void find_swap_solve(Result &result, ld target_score) {
 	if (idx == Gs.size()) {
 		cout << "No graph with integer delta score found" << endl;
 		// find_distribution(target_score, G.invariant->V, 13);
-		rigorous_solve(result, target_score);
+		// rigorous_solve(result, target_score);
 		return;
 	}
 	cout << "Found graph with integer delta score" << endl;
 	G = Gs[idx];
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, target_score, 1, 100, true);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 30000, 1000, 950, false, target_score, 3, 500, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
@@ -443,7 +443,7 @@ void find_swap_solve(Result &result, ld target_score) {
 void improve_existing(Result &result) {
 	OptimizedGraph G;
 	short population_sz = 128;
-	optimized_read_best_graph(G, result.size, result.id, "mindstorm1");
+	optimized_read_best_graph(G, result.size, result.id, "mindstormX");
 	cout << "Improving " << result.size << result.id << " best score " << result.best_score << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
 	ld T_start = max((ld) 200, result.delta_score);
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, T_start, 0.95 * T_start, false, result.best_score, 2, 100);
