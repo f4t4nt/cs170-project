@@ -419,7 +419,7 @@ void optimized_read_teams(OptimizedGraph &G, str file) {
 	}
 	init_teams(G, T);
 	FOR (i, sz(teams_json)) {
-		G.node_teams[i] = (ch) (teams_json[i] - 1);
+		G.node_teams[i] = (ch) (((int) teams_json[i]) - 1);
 		G.team_sizes[G.node_teams[i]]++;
 	}
 }
