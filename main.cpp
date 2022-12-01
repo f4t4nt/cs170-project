@@ -239,7 +239,7 @@ struct OptimizedBlacksmithSwapController {
 	}
 };
 
-OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = true, ld target_score = 0, short stagnation_limit = 1, ld ignition_factor = 1.1, bool swaps = false) {
+OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = true, ld target_score = 0, short stagnation_limit = 1, ld ignition_factor = 1.1, bool swaps = false, bool search_deltas = false) {
 	G.score = INF;
 	bool extended = true;
 	ll stagnation = 0;
@@ -260,9 +260,19 @@ OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, l
 					G = population_best;
 				}
 			}
-			if (i % 200 == 0) {
+			if (i % 100 == 0) {
 				optimized_write_output(G);
 				cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
+				if (search_deltas) {
+					FOR (j, population_size) {
+						auto &agent = shepard.population[j];
+						if (round(agent.G.score - target_score) == agent.G.score - target_score) {
+							cout << "Found a score with an integer delta with the target score!" << endl;
+							optimized_write_output(agent.G, true);
+							return agent.G;
+						}
+					}
+				}
 				if (previous_score == best_score || shepard.T_start < 1e-2) {
 					stagnation++;
 					if (stagnation >= stagnation_limit) {
