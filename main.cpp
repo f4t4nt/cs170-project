@@ -169,8 +169,8 @@ struct OptimizedBlacksmithController {
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.999;
-		T_end *= 0.999;
+		T_start *= 0.993;
+		T_end *= 0.993;
 	}
 	void step_and_prune() {
 		step();
@@ -436,7 +436,7 @@ void find_swap_solve(Result &result, ld target_score) {
 	if (idx == Gs.size()) {
 		cout << "No graph with integer delta score found" << endl;
 		// find_distribution(target_score, G.invariant->V, 13);
-		// rigorous_solve(result, target_score);
+		rigorous_solve(result, target_score);
 		return;
 	}
 	cout << "Found graph with integer delta score" << endl;
