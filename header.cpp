@@ -466,7 +466,7 @@ void optimized_read_best_graph(OptimizedGraph &G, str test_sz, ll test_id, str r
 		str team_file_name = team_file.filename().string();
 		team_file_name = team_file_name.substr(0, team_file_name.find("."));
 		if (best_team_file_name == "" ||
-			stoll(team_file_name.substr(0, team_file_name.find("_"))) <
+			stoll(team_file_name.substr(0, team_file_name.find("_"))) <=
 			stoll(best_team_file_name.substr(0, best_team_file_name.find("_")))) {
 			best_team_file_name = team_file_name;
 		}
@@ -562,13 +562,17 @@ void write_output(Graph &G) {
 	fout << "]" << endl;
 }
 
-void optimized_write_output(OptimizedGraph &G) {
+void optimized_write_output(OptimizedGraph &G, bool int_delta = false) {
 	str OUT_FILE;
 	if (RUN_TYPE == "") {
-		OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(optimized_get_score(G)) + ".out";
+		OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(optimized_get_score(G));
 	} else {
-		OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(optimized_get_score(G)) + "_" + RUN_TYPE + ".out";
+		OUT_FILE = IN_FILE.substr(0, sz(IN_FILE) - 1) + "/" + score_to_str(optimized_get_score(G)) + "_" + RUN_TYPE;
 	}
+	if (int_delta) {
+		OUT_FILE += "_int";
+	}
+	OUT_FILE += ".out";
 	ofstream fout(OUT_FILE);
 	fout << "[" << G.node_teams[0] + 1;
 	FOB (i, 1, G.invariant->V) {
