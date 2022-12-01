@@ -225,8 +225,8 @@ struct OptimizedBlacksmithSwapController {
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.996;
-		T_end *= 0.996;
+		T_start *= 0.993;
+		T_end *= 0.993;
 	}
 	void step_and_prune() {
 		step();
@@ -378,7 +378,7 @@ void rigorous_solve(Result &result, ld target_score) {
 	while (team_count >= 2) {
 		cout << "Trying " << (ll) team_count << " teams" << endl;
 		init_teams(G, team_count);
-		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 2, 100);
+		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 1000, 950, true, target_score, 3, 100);
 		optimized_write_output(G);
 		if (G.score < target_score + 1e-9) {
 			cout << "Target score reached" << endl;
@@ -400,10 +400,10 @@ void rigorous_solve(Result &result, ld target_score) {
 
 void swap_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
-	short population_sz = 512;
+	short population_sz = 1024;
 	optimized_read_best_graph(G, result.size, result.id, "mindstorm");
 	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, target_score, 1, 100, true);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 1000, 950, false, target_score, 1, 100, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
@@ -431,7 +431,7 @@ void find_swap_solve(Result &result, ld target_score) {
 	}
 	cout << "Found graph with integer delta score" << endl;
 	G = Gs[idx];
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, target_score, 1, 100, true);
+	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 1000, 950, false, target_score, 1, 100, true);
 	optimized_write_output(G);
 	if (G.score <= result.best_score) {
 		cout << "Target score reached" << endl;
