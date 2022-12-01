@@ -466,7 +466,7 @@ void optimized_read_best_graph(OptimizedGraph &G, str test_sz, ll test_id, str r
 		str team_file_name = team_file.filename().string();
 		team_file_name = team_file_name.substr(0, team_file_name.find("."));
 		if (best_team_file_name == "" ||
-			stoll(team_file_name.substr(0, team_file_name.find("_"))) <
+			stoll(team_file_name.substr(0, team_file_name.find("_"))) <=
 			stoll(best_team_file_name.substr(0, best_team_file_name.find("_")))) {
 			best_team_file_name = team_file_name;
 		}

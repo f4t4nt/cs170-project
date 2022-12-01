@@ -346,7 +346,7 @@ void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = team_max;
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "mindstorm");
+	optimized_read_graph(G, result.size, result.id, "mindstorm1");
 	while (team_count >= team_min) {
 		cout << "Trying " << (ll) team_count << " teams" << endl;
 		init_teams(G, team_count);
@@ -367,11 +367,11 @@ void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min
 
 void rigorous_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
-	short population_sz = 512;
+	short population_sz = 2048;
 	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ch team_count = max_teams(result.best_score);
 	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "mindstorm");
+	optimized_read_graph(G, result.size, result.id, "mindstorm1");
 	// optimized_read_best_graph(G, result.size, result.id, "rand_error");
 	// team_count = min((ch) (G.invariant->T + 1), team_count);
 	short increase_limit = 1;
@@ -401,7 +401,7 @@ void rigorous_solve(Result &result, ld target_score) {
 void swap_solve(Result &result, ld target_score) {
 	OptimizedGraph G;
 	short population_sz = 512;
-	optimized_read_best_graph(G, result.size, result.id, "mindstorm");
+	optimized_read_best_graph(G, result.size, result.id, "mindstorm1");
 	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 100, 95, false, target_score, 1, 100, true);
 	optimized_write_output(G);
@@ -415,9 +415,9 @@ void swap_solve(Result &result, ld target_score) {
 void find_swap_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs;
 	OptimizedGraph G;
-	short population_sz = 1024;
-	optimized_read_graph(G, result.size, result.id, "mindstorm");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "mindstorm");
+	short population_sz = 2048;
+	optimized_read_graph(G, result.size, result.id, "mindstorm1");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "mindstorm1");
 	cout << "Rigorously find-swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
 	ll idx = 0;
 	while (idx < Gs.size() && Gs[idx].score - target_score != round(Gs[idx].score - target_score)) {
@@ -443,7 +443,7 @@ void find_swap_solve(Result &result, ld target_score) {
 void improve_existing(Result &result) {
 	OptimizedGraph G;
 	short population_sz = 128;
-	optimized_read_best_graph(G, result.size, result.id, "mindstorm");
+	optimized_read_best_graph(G, result.size, result.id, "mindstorm1");
 	cout << "Improving " << result.size << result.id << " best score " << result.best_score << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
 	ld T_start = max((ld) 200, result.delta_score);
 	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, T_start, 0.95 * T_start, false, result.best_score, 2, 100);
@@ -463,12 +463,16 @@ int main() {
 		FORE (result, results) {
 			if (abs(result.delta_score) < 1e-9) {
 				continue;
-			} elif (result.delta_score < 0) {
-				improve_existing(result);
-			} elif (round(result.delta_score) == result.delta_score) {
-				swap_solve(result, result.best_score);
 			} else {
 				find_swap_solve(result, result.best_score);
+				// improve_existing(result);
+				// rigorous_solve(result, result.best_score);
+			// } elif (result.delta_score < 0) {
+			// 	improve_existing(result);
+			// } elif (round(result.delta_score) == result.delta_score) {
+			// 	swap_solve(result, result.best_score);
+			// } else {
+			// 	find_swap_solve(result, result.best_score);
 			}
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
