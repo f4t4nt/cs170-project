@@ -276,8 +276,8 @@ void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
 	short population_sz = 1024;
-	optimized_read_graph(G, result.size, result.id, "boss_battle");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "boss_battle");
+	optimized_read_graph(G, result.size, result.id, "da_best");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "da_best");
 	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
 	map<ll, ll> team_sizes;
 	ll elite = min((ll) sz(Gs), 128ll), idx = 0, int_deltas = 0;
@@ -286,7 +286,7 @@ void final_solve(Result &result, ld target_score) {
 		Gs_.pb(Gs[idx]);
 		idx++;
 	}
-	while (idx < sz(Gs) && sz(team_sizes) < 5) {
+	while (idx < sz(Gs) && sz(team_sizes) < 3) {
 		if (team_sizes.find(Gs[idx].invariant->T) == team_sizes.end() ||
 			team_sizes[Gs[idx].invariant->T] < 8) {
 			team_sizes[Gs[idx].invariant->T]++;
@@ -306,6 +306,26 @@ void final_solve(Result &result, ld target_score) {
 		}
 		idx++;
 	}
+	/* stupidest way of fixing this but w/e XD */
+	pair<ll, ll> most_frequent_team = {-1, -1};
+	FORE (p, team_sizes) {
+		if (p.second > most_frequent_team.second) {
+			most_frequent_team = p;
+		}
+	}
+	idx = 0;
+	while (idx < sz(Gs_)) {
+		if (Gs_[idx].invariant->T != most_frequent_team.first) {
+			Gs_.erase(Gs_.begin() + idx);
+		} else {
+			idx++;
+		}
+	}
+	team_sizes.clear();
+	FORE (g, Gs_) {
+		team_sizes[g.invariant->T]++;
+	}
+	/* --------------------------------------- */
 	Gs = Gs_;
 	cout << "Using " << sz(Gs) << " graphs" << endl;
 	FORE (p, team_sizes) {
@@ -332,10 +352,10 @@ void final_solve(Result &result, ld target_score) {
 }
 
 int main() {
+	auto start = chrono::high_resolution_clock::now();
 	while (true) {
 		srand(time(NULL));
 		vector<Result> results = read_queue();
-		auto start = chrono::high_resolution_clock::now();
 		FORE (result, results) {
 			final_solve(result, result.best_score);
 			auto end = chrono::high_resolution_clock::now();
