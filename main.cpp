@@ -212,7 +212,7 @@ OptimizedGraph optimize(
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
 	OptimizedBlacksmithController smith;
-	smith.init(G, team_count, population_size, 50, 40, Gs);
+	smith.init(G, team_count, population_size, 10, 9, Gs);
 	FOR (i, idle_steps) {
 		smith.step();
 	}
@@ -238,7 +238,6 @@ OptimizedGraph optimize(
 					if (round(agent.G.score - target_score) == agent.G.score - target_score) {
 						cout << "Found a score with an integer delta score" << endl;
 						optimized_write_output(agent.G, true);
-						return agent.G;
 					}
 				}
 			}
@@ -276,7 +275,7 @@ OptimizedGraph optimize(
 void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
-	short population_sz = 4096;
+	short population_sz = 1024;
 	optimized_read_graph(G, result.size, result.id, "boss_battle");
 	Gs = optimized_read_local_graphs(G, result.size, result.id, "boss_battle");
 	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
