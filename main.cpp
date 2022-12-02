@@ -219,7 +219,7 @@ OptimizedGraph optimize(
 	smith.step_and_prune();
 	smith.T_start = T_start0;
 	smith.T_end = T_end0;
-	ll batch_steps = idle_steps * 5 + 1;
+	ll batch_steps = (idle_steps + 1) * 5;
 	FOR (i, generations) {
 		smith.step_and_prune();
 		auto population_best = smith.population[0].G;
@@ -276,7 +276,7 @@ OptimizedGraph optimize(
 void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
-	short population_sz = 1024;
+	short population_sz = 4096;
 	optimized_read_graph(G, result.size, result.id, "boss_battle");
 	Gs = optimized_read_local_graphs(G, result.size, result.id, "boss_battle");
 	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
