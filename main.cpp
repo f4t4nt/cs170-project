@@ -319,7 +319,7 @@ void final_solve(Result &result, ld target_score) {
 	cout << "Best score: " << Gs[0].score << endl;
 	cout << "Worst score: " << Gs.back().score << endl;
 	cout << endl;
-	ld T_start = 1000, T_end = 950, ignition_factor = 100;
+	ld T_start = 100, T_end = 95, ignition_factor = 10;
 	ll idle_steps = 19, generations = 1000000, stagnation_limit = 16;
 	bool search_deltas = true;
 	G = optimize(G, Gs[0].invariant->T, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs);
