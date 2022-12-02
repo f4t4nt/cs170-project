@@ -319,7 +319,7 @@ void final_solve(Result &result, ld target_score) {
 	cout << "Worst score: " << Gs.back().score << endl;
 	cout << endl;
 	ld T_start = 100, T_end = 95, ignition_factor = 10;
-	ll idle_steps = 19, generations = 1000000, stagnation_limit = 16;
+	ll idle_steps = 19, generations = 1000000, stagnation_limit = 4;
 	bool search_deltas = true;
 	G = optimize(G, Gs[0].invariant->T, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs);
 	if (G.score <= target_score + 1e-9) {
@@ -332,17 +332,17 @@ void final_solve(Result &result, ld target_score) {
 }
 
 int main() {
-	srand(time(NULL));
-	vector<Result> results = read_queue();
-	auto start = chrono::high_resolution_clock::now();
 	while (true) {
+		srand(time(NULL));
+		vector<Result> results = read_queue();
+		auto start = chrono::high_resolution_clock::now();
 		FORE (result, results) {
 			final_solve(result, result.best_score);
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
 		}
-		cout << "Restarting" << endl << endl;
+		cout << "------RESTARTING------" << endl << endl;
 	}
 	return 0;
 }
