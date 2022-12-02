@@ -4,8 +4,8 @@ import sys
 
 sys.setrecursionlimit(1000000)
 
-G = read_input('./tests/large/large6/graph.in')
-target_score = 494.2023873427806
+G = read_input('./tests/large/large169/graph.in')
+target_score = 3312.6121493860305
 
 node_weights = [(0, i) for i in range(G.number_of_nodes())]
 weight_matrix = nx.to_numpy_matrix(G)
@@ -35,8 +35,9 @@ def get_components(G: nx.Graph):
     return components
 
 components = get_components(G)
+print(len(components))
 
-team_count = 3
+team_count = 7
 # for i in range(G.number_of_nodes()):
 #     team_count = max(team_count, G.nodes[i]['team'])
 # team_dist = [0] * team_count
@@ -63,39 +64,41 @@ team_count = 3
 #     else:
 #         max_t = threshold
 
-set0 = set(range(G.number_of_nodes()))
-for v in G[0]:
-    set0.remove(v)
+# deg_list = []
+# for v in G:
+#     deg_list.append((len(G[v]), v))
+# deg_list.sort()
 
-# edges = []
-# for u, v, w in G.edges(data=True):
-#     if u != 0 and v != 0:
-#         edges.append((w['weight'], u, v))
-# edges.sort()
-
-deg_list = []
-for v in G:
-    deg_list.append((len(G[v]), v))
-deg_list.sort()
-
-threshold = 500
-for edge in G.edges:
-    if G.edges[edge]['weight'] > threshold:
-        G.remove_edge(edge[0], edge[1])
+# threshold = max_t
+# for edge in G.edges:
+#     if G.edges[edge]['weight'] > threshold:
+#         G.remove_edge(edge[0], edge[1])
 colors = nx.coloring.greedy_color(G, strategy='DSATUR')
 team_dist = [0] * team_count
 for v in G:
     G.nodes[v]['team'] = colors[v] + 1
     team_dist[colors[v]] += 1
-# un0_count = [0, 0, 0]
-for v in set0:
-    # un0_count[G.nodes[v]['team'] - 1] += 1
-    if G.nodes[v]['team'] == 2:
-        G.nodes[v]['team'] = 3
-        team_dist[2] += 1
-        team_dist[1] -= 1
+for _ in range(3):
+    for v in G:
+        possible_teams = []
+        for team in range(team_count):
+            possible = True
+            for neighbor in G[v]:
+                if G.nodes[neighbor]['team'] == team + 1:
+                    possible = False
+                    break
+            if possible:
+                possible_teams.append(team + 1)
+        smallest_team = float('inf')
+        team_dist[G.nodes[v]['team'] - 1] -= 1
+        for team in possible_teams:
+            if team_dist[team - 1] < smallest_team:
+                smallest_team = team_dist[team - 1]
+                G.nodes[v]['team'] = team
+        team_dist[G.nodes[v]['team'] - 1] += 1
 print(team_dist)
 validate_output(G)
+visualize(G)
 print(score(G, separated=True))
 print(score(G))
 print('[' + ', '.join([str(G.nodes[i]['team']) for i in range(G.number_of_nodes())]) + ']')
