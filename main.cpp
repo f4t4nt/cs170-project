@@ -69,7 +69,7 @@ struct OptimizedAnnealingAgent {
 		G = G_in;
 		T = T0;
 	}
-	void step() {
+	void stepSingle() {
 		short node = rand() % G.invariant->V;
 		ch old_team = G.node_teams[node];
 		ch new_team = rand() % G.invariant->T;
@@ -103,17 +103,7 @@ struct OptimizedAnnealingAgent {
 			return;
 		}
 	}
-};
-
-
-struct OptimizedAnnealingSwapAgent {
-	OptimizedGraph G;
-	ld T;
-	void init(const OptimizedGraph &G_in, ld T0) {
-		G = G_in;
-		T = T0;
-	}
-	void step() {
+	void stepSwap() {
 		short node1 = rand() % G.invariant->V;
 		short node2 = rand() % G.invariant->V;
 		while (node1 == node2 || G.node_teams[node1] == G.node_teams[node2]) {
@@ -140,19 +130,30 @@ struct OptimizedAnnealingSwapAgent {
 struct OptimizedBlacksmithController {
 	vector<OptimizedAnnealingAgent> population;
 	ld T_start, T_end;
-	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld T_start0, ld T_end0, bool randomize = true) {
+	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld T_start0, ld T_end0, vector<OptimizedGraph> Gs = {}, bool preserve_dist = false) {
 		population = vector<OptimizedAnnealingAgent>(population_size);
 		T_start = T_start0;
 		T_end = T_end0;
-		if (randomize) {
-			FOR (i, population_size) {
-				population[i] = {optimized_random_assignment(G_in, team_count), T_start};
-				optimized_get_score(population[i].G);
+		if (sz(Gs) == 0) {
+			if (preserve_dist) {
+				FOR (i, population_size) {
+					population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+					optimized_get_score(population[i].G);
+				}
+			} else {
+				FOR (i, population_size) {
+					population[i] = {G_in, 0};
+					FOR (_, 10000) {
+						short node1 = rand() % population[i].G.invariant->V;
+						short node2 = rand() % population[i].G.invariant->V;
+						swap(population[i].G.node_teams[node1], population[i].G.node_teams[node2]);
+					}
+					optimized_get_score(population[i].G);
+				}
 			}
 		} else {
-			optimized_get_score(G_in);
 			FOR (i, population_size) {
-				population[i] = {G_in, T_start};
+				population[i] = {Gs[i % sz(Gs)], T_start};
 			}
 		}
 	}
@@ -163,306 +164,172 @@ struct OptimizedBlacksmithController {
 			auto &agent = population[i];
 			agent.T = T_start;
 			while (agent.T > T_end) {
-				FOR (j, 500) {
-					agent.step();
+				FOR (j, 250) {
+					agent.stepSingle();
+					agent.stepSwap();
 				}
 				agent.T *= 0.999;
 			}
 		}
-		T_start *= 0.996;
-		T_end *= 0.996;
+		T_start *= 0.99;
+		T_end *= 0.99;
 	}
 	void step_and_prune() {
 		step();
 		sort(all(population), [](OptimizedAnnealingAgent &a, OptimizedAnnealingAgent &b) {
 			return a.G.score < b.G.score;
 		});
-		FOR (i, sz(population) / 2) {
-			population[i + sz(population) / 2] = population[i];
+		ll half = sz(population) / 2;
+		FOB (i, half, sz(population)) {
+			population[i] = population[rand() % half];
+			ll other;
+			do {
+				other = rand() % half;
+			} while (population[other].G.invariant->T != population[i].G.invariant->T);
+			if (other != i) {
+				optimized_cross(population[i].G, population[rand() % half].G);
+			}
 		}
 	}
 };
 
-struct OptimizedBlacksmithSwapController {
-	vector<OptimizedAnnealingSwapAgent> population;
-	ld T_start, T_end;
-	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld T_start0, ld T_end0, bool randomize = true) {
-		population = vector<OptimizedAnnealingSwapAgent>(population_size);
-		T_start = T_start0;
-		T_end = T_end0;
-		if (randomize && find(G_in.team_sizes.begin(), G_in.team_sizes.end(), -1) != G_in.team_sizes.end()) {
-			FOR (i, population_size) {
-				population[i] = {optimized_random_assignment(G_in, team_count), T_start};
-				optimized_get_score(population[i].G);
-			}
-		} elif (randomize) {
-			FOR (i, population_size) {
-				population[i] = {G_in, 0};
-				FOR (_, 1000) {
-					short node1 = rand() % population[i].G.invariant->V;
-					short node2 = rand() % population[i].G.invariant->V;
-					swap(population[i].G.node_teams[node1], population[i].G.node_teams[node2]);
-				}
-				optimized_get_score(population[i].G);
-			}
-		} else {
-			optimized_get_score(G_in);
-			FOR (i, population_size) {
-				population[i] = {G_in, T_start};
-			}
-		}
-	}
-	void step() {
-		auto population_size = sz(population);
-		#pragma omp parallel for
-		for (size_t i = 0; i < population_size; i++) {
-			auto &agent = population[i];
-			agent.T = T_start;
-			while (agent.T > T_end) {
-				FOR (j, 500) {
-					agent.step();
-				}
-				agent.T *= 0.999;
-			}
-		}
-		T_start *= 0.993;
-		T_end *= 0.993;
-	}
-	void step_and_prune() {
-		step();
-		sort(all(population), [](OptimizedAnnealingSwapAgent &a, OptimizedAnnealingSwapAgent &b) {
-			return a.G.score < b.G.score;
-		});
-		FOR (i, sz(population) / 2) {
-			population[i + sz(population) / 2] = population[i];
-		}
-	}
-};
-
-OptimizedGraph optimized_annealing_algorithm(OptimizedGraph &G, ll team_count, ll population_size, ll generations, ld T_start0, ld T_end0, bool randomize = true, ld target_score = 0, short stagnation_limit = 1, ld ignition_factor = 1.1, bool swaps = false, bool search_deltas = false) {
+OptimizedGraph optimize(
+			OptimizedGraph &G,
+			ll team_count,
+			ll population_size,
+			ll generations,
+			ll idle_steps,
+			ld T_start0,
+			ld T_end0,
+			ld target_score = 0,
+			short stagnation_limit = 10,
+			ld ignition_factor = 100,
+			bool search_deltas = false,
+			vector<OptimizedGraph> Gs = {}
+		) {
 	G.score = INF;
 	bool extended = true;
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
-	if (!swaps) {
-		cout << "Regular solve confirmed" << endl;
-		OptimizedBlacksmithController shepard;
-		shepard.init(G, team_count, population_size, T_start0, T_end0, randomize);
-		FOR (i, 50) {
-			shepard.step();
+	OptimizedBlacksmithController smith;
+	smith.init(G, team_count, population_size, 50, 40, Gs);
+	FOR (i, idle_steps) {
+		smith.step();
+	}
+	smith.step_and_prune();
+	smith.T_start = T_start0;
+	smith.T_end = T_end0;
+	ll batch_steps = idle_steps * 5 + 1;
+	FOR (i, generations) {
+		smith.step_and_prune();
+		auto population_best = smith.population[0].G;
+		if (population_best.score < best_score) {
+			best_score = population_best.score;
+			if (population_best.score < G.score) {
+				G = population_best;
+			}
 		}
-		FOR (i, generations) {
-			shepard.step_and_prune();
-			auto population_best = shepard.population[0].G;
-			if (population_best.score < best_score) {
-				best_score = population_best.score;
-				if (population_best.score < G.score) {
-					G = population_best;
-				}
-			}
-			if (i % 100 == 0) {
-				optimized_write_output(G);
-				cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
-				if (search_deltas) {
-					FOR (j, population_size) {
-						auto &agent = shepard.population[j];
-						if (round(agent.G.score - target_score) == agent.G.score - target_score) {
-							cout << "Found a score with an integer delta with the target score!" << endl;
-							optimized_write_output(agent.G, true);
-							return agent.G;
-						}
+		if (i % batch_steps == 0) {
+			optimized_write_output(G);
+			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 2 - 1].G.score << ", temperature " << smith.T_start << endl;
+			if (search_deltas) {
+				FOR (j, population_size) {
+					auto &agent = smith.population[j];
+					if (round(agent.G.score - target_score) == agent.G.score - target_score) {
+						cout << "Found a score with an integer delta score" << endl;
+						optimized_write_output(agent.G, true);
+						return agent.G;
 					}
 				}
-				if (previous_score == best_score || shepard.T_start < 1e-2) {
-					stagnation++;
-					if (stagnation >= stagnation_limit) {
-						cout << "Stagnation limit reached, terminating" << endl;
-						break;
-					}
-					if (shepard.T_start < T_start0 / ignition_factor) {
-						shepard.T_start *= ignition_factor;
-						shepard.T_end *= ignition_factor;
-						cout << "Reigniting, temperature set to " << shepard.T_start << endl;
-					} else {
-						shepard.init(G, team_count, population_size, T_start0, T_end0);
-						cout << "Ionizing" << endl;
-					}
-					best_score = 1e18;
-				}
-				if (G.score <= target_score && extended) {
-					stagnation_limit++;
-					extended = false;
-				}
-				previous_score = best_score;
 			}
-			FOR (j, 19) {
-				shepard.step();
+			if (previous_score == best_score || smith.T_start < 1e-2) {
+				stagnation++;
+				if (stagnation >= stagnation_limit) {
+					cout << "Stagnation limit reached, terminating" << endl;
+					break;
+				}
+				cout << "Stagnation " << stagnation << ", firing up furnace" << endl;
+				if (smith.T_start < T_start0 / ignition_factor) {
+					smith.T_start *= ignition_factor;
+					smith.T_end *= ignition_factor;
+					cout << "Temperature set to " << smith.T_start << endl;
+				} else {
+					smith.init(G, team_count, population_size, T_start0, T_end0);
+					cout << "Ionizing" << endl;
+				}
+				best_score = 1e18;
 			}
-			i += 19;
+			if (G.score <= target_score && extended) {
+				stagnation_limit++;
+				extended = false;
+			}
+			previous_score = best_score;
 		}
-	} else {
-		cout << "Swap solve confirmed" << endl;
-		OptimizedBlacksmithSwapController shepard;
-		shepard.init(G, team_count, population_size, T_start0, T_end0, randomize);
-		FOR (i, 50) {
-			shepard.step();
+		FOR (j, idle_steps) {
+			smith.step();
 		}
-		FOR (i, generations) {
-			shepard.step_and_prune();
-			auto population_best = shepard.population[0].G;
-			if (population_best.score < best_score) {
-				best_score = population_best.score;
-				if (population_best.score < G.score) {
-					G = population_best;
-				}
-			}
-			if (i % 200 == 0) {
-				optimized_write_output(G);
-				cout << "Generation " << i << " best score (" << G.score << " | " << best_score << "), temperature " << shepard.T_start << endl;
-				if (previous_score == best_score || shepard.T_start < 1e-2) {
-					stagnation++;
-					if (stagnation >= stagnation_limit) {
-						cout << "Stagnation limit reached, terminating" << endl;
-						break;
-					}
-					if (shepard.T_start < T_start0 / ignition_factor) {
-						shepard.T_start *= ignition_factor;
-						shepard.T_end *= ignition_factor;
-						cout << "Reigniting, temperature set to " << shepard.T_start << endl;
-					} else {
-						shepard.init(G, team_count, population_size, T_start0, T_end0);
-						cout << "Ionizing" << endl;
-					}
-					best_score = 1e18;
-				}
-				if (G.score <= target_score && extended) {
-					stagnation_limit++;
-					extended = false;
-				}
-				previous_score = best_score;
-			}
-			FOR (j, 19) {
-				shepard.step();
-			}
-			i += 19;
-		}
+		i += idle_steps;
 	}
 	return G;
 }
 
-void assume_team_range(Result &result, ld target_score, ch team_max, ch team_min = 2) {
-	OptimizedGraph G;
-	short population_sz = 5000;
-	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
-	ch team_count = team_max;
-	ld previous_score = INF;
-	optimized_read_graph(G, result.size, result.id, "rank_1");
-	while (team_count >= team_min) {
-		cout << "Trying " << (ll) team_count << " teams" << endl;
-		init_teams(G, team_count);
-		G = optimized_annealing_algorithm(G, team_count, population_sz, 100000, 2000, 1900, true, target_score, 5, 200, false, true);
-		optimized_write_output(G);
-		if (G.score < target_score + 1e-9) {
-			cout << "Target score reached" << endl;
-		} elif (G.score < result.local_score) {
-			cout << "Local score beat" << endl;
-		}
-		cout << endl;
-		if (G.score > previous_score) {
-			break;
-		}
-		team_count--;
-	}
-}
-
-void rigorous_solve(Result &result, ld target_score) {
-	OptimizedGraph G;
-	short population_sz = 4000;
-	cout << "Rigorously solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
-	ch team_count = max_teams(result.best_score);
-	ld previous_score = INF;
-	// optimized_read_graph(G, result.size, result.id, "mindstormX");
-	optimized_read_best_graph(G, result.size, result.id, "rank_1");
-	team_count = min((ch) (G.invariant->T + 1), team_count);
-	short increase_limit = 1;
-	while (team_count >= 2) {
-		cout << "Trying " << (ll) team_count << " teams" << endl;
-		init_teams(G, team_count);
-		G = optimized_annealing_algorithm(G, team_count, population_sz, 20000, 2000, 1900, true, target_score, 3, 100);
-		optimized_write_output(G);
-		if (G.score < target_score + 1e-9) {
-			cout << "Target score reached" << endl;
-		} elif (G.score < result.local_score) {
-			cout << "Local score beat" << endl;
-		}
-		if (G.score > previous_score) {
-			increase_limit--;
-			if (increase_limit == 0) {
-				cout << "Increase limit reached, terminating" << endl;
-				break;
-			}
-		}
-		cout << endl;
-		team_count--;
-		previous_score = G.score;
-	}
-}
-
-void swap_solve(Result &result, ld target_score) {
+void final_solve(Result &result, ld target_score) {
+	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
 	short population_sz = 1024;
-	optimized_read_best_graph(G, result.size, result.id, "rank_1");
-	cout << "Rigorously swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 1000, 950, false, target_score, 1, 100, true);
-	optimized_write_output(G);
-	if (G.score <= result.best_score) {
-		cout << "Target score reached" << endl;
-	} elif (G.score < result.local_score) {
-		cout << "Local score beat" << endl;
-	}
-}
-
-void find_swap_solve(Result &result, ld target_score) {
-	vector<OptimizedGraph> Gs;
-	OptimizedGraph G;
-	short population_sz = 4000;
-	optimized_read_graph(G, result.size, result.id, "rank_1");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "rank_1");
-	cout << "Rigorously find-swap solving " << result.size << result.id << " with target score " << target_score << " and population size " << population_sz << endl << endl;
-	ll idx = 0;
-	while (idx < Gs.size() && Gs[idx].score - target_score != round(Gs[idx].score - target_score)) {
+	optimized_read_graph(G, result.size, result.id, "boss_battle");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "boss_battle");
+	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
+	map<ll, ll> team_sizes;
+	ll elite = min((ll) sz(Gs), 128ll), idx = 0, int_deltas = 0;
+	while (idx < elite) {
+		team_sizes[Gs[idx].invariant->T]++;
+		Gs_.pb(Gs[idx]);
 		idx++;
 	}
-	if (idx == Gs.size()) {
-		cout << "No graph with integer delta score found" << endl;
-		// find_distribution(target_score, G.invariant->V, 13);
-		rigorous_solve(result, target_score);
-		return;
+	while (idx < sz(Gs) && sz(team_sizes) < 5) {
+		if (team_sizes.find(Gs[idx].invariant->T) == team_sizes.end() ||
+			team_sizes[Gs[idx].invariant->T] < 8) {
+			team_sizes[Gs[idx].invariant->T]++;
+			Gs_.pb(Gs[idx]);
+		} elif (Gs[idx].score - target_score == round(Gs[idx].score - target_score)) {
+			Gs_.pb(Gs[idx]);
+			team_sizes[Gs[idx].invariant->T]++;
+			int_deltas++;
+		}
+		idx++;
 	}
-	cout << "Found graph with integer delta score" << endl;
-	G = Gs[idx];
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 10000, 2000, 1900, false, target_score, 1, 300, true);
-	optimized_write_output(G);
-	if (G.score <= result.best_score) {
+	while (idx < sz(Gs)) {
+		if (Gs[idx].score - target_score == round(Gs[idx].score - target_score)) {
+			Gs_.pb(Gs[idx]);
+			team_sizes[Gs[idx].invariant->T]++;
+			int_deltas++;
+		}
+		idx++;
+	}
+	Gs = Gs_;
+	cout << "Using " << sz(Gs) << " graphs" << endl;
+	FORE (p, team_sizes) {
+		cout << "Team size " << p.first << ": " << p.second << endl;
+	}
+	cout << endl;
+	cout << "Integer deltas: " << int_deltas << endl;
+	cout << endl;
+	cout << "Target score " << target_score << endl;
+	cout << "Best score: " << Gs[0].score << endl;
+	cout << "Worst score: " << Gs.back().score << endl;
+	cout << endl;
+	ld T_start = 1000, T_end = 950, ignition_factor = 100;
+	ll idle_steps = 19, generations = 1000000, stagnation_limit = 16;
+	bool search_deltas = true;
+	G = optimize(G, Gs[0].invariant->T, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs);
+	if (G.score <= target_score + 1e-9) {
 		cout << "Target score reached" << endl;
 	} elif (G.score < result.local_score) {
 		cout << "Local score beat" << endl;
 	}
-}
-
-void improve_existing(Result &result) {
-	OptimizedGraph G;
-	short population_sz = 128;
-	optimized_read_best_graph(G, result.size, result.id, "rank_1");
-	cout << "Improving " << result.size << result.id << " best score " << result.best_score << ", current score " << optimized_get_score(G) << " with population size " << population_sz << endl << endl;
-	ld T_start = max((ld) 200, result.delta_score);
-	G = optimized_annealing_algorithm(G, G.invariant->T, population_sz, 100000, 2000, 1900, true, result.best_score, 5, 200, false, true);
+	cout << endl;
 	optimized_write_output(G);
-	if (G.score <= result.best_score) {
-		cout << "Target score reached" << endl;
-	} elif (G.score < result.local_score) {
-		cout << "Local score beat" << endl;
-	}
 }
 
 int main() {
@@ -471,7 +338,7 @@ int main() {
 	auto start = chrono::high_resolution_clock::now();
 	while (true) {
 		FORE (result, results) {
-			improve_existing(result);
+			final_solve(result, result.best_score);
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
