@@ -202,7 +202,7 @@ struct OptimizedBlacksmithController {
 	}
 };
 
-OptimizedGraph optimize(
+pair<OptimizedGraph, bool> optimize(
 			OptimizedGraph &G,
 			ll team_count,
 			ll population_size,
@@ -217,11 +217,11 @@ OptimizedGraph optimize(
 			vector<OptimizedGraph> Gs = {}
 		) {
 	G.score = INF;
-	bool extended = true;
+	bool extended = true, delta = false;
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
 	OptimizedBlacksmithController smith;
-	smith.init(G, team_count, population_size, 10, 9, Gs);
+	smith.init(G, team_count, population_size, 1, 0.9, Gs);
 	FOR (i, idle_steps) {
 		smith.step();
 	}
@@ -250,6 +250,7 @@ OptimizedGraph optimize(
 							optimized_write_output(agent.G, true);
 							cout << "Found delta " << agent.G.score - target_score << endl;
 							found_delta = true;
+							delta = true;
 						}
 						agent.G.lock_distribution = true;
 					}
@@ -261,7 +262,7 @@ OptimizedGraph optimize(
 					cout << "Stagnation limit reached, terminating" << endl;
 					break;
 				}
-				cout << "Stagnation " << stagnation << ", firing up furnace" << endl;
+				cout << "Stagnation " << stagnation << ", firing up forge" << endl;
 				if (smith.T_start < T_start0 / ignition_factor) {
 					smith.T_start *= ignition_factor;
 					smith.T_end *= ignition_factor;
@@ -283,16 +284,14 @@ OptimizedGraph optimize(
 		}
 		i += idle_steps;
 	}
-	return G;
+	return {G, delta};
 }
 
 void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
-	short population_sz = 1024;
 	optimized_read_graph(G, result.size, result.id, "nightfall");
 	Gs = optimized_read_local_graphs(G, result.size, result.id, "nightfall");
-	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
 	map<ll, ll> team_sizes;
 	ll elite = min((ll) sz(Gs), 128ll), idx = 0, int_deltas = 0;
 	set<ll> int_delta_team_sizes;	
@@ -330,23 +329,26 @@ void final_solve(Result &result, ld target_score) {
 		}
 		idx++;
 	}
+	short population_sz = 512;
+	ld T_start = 100, T_end = 95, ignition_factor = 50;
+	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
+	bool search_deltas = true;
+	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
 	cout << "Target score " << target_score << endl;
 	cout << "Best score: " << Gs[0].score << endl;
 	cout << "Worst score: " << Gs.back().score << endl;
 	cout << endl;
 	FORE (p, team_sizes) {
 		if (int_delta_team_sizes.find(p.first) == int_delta_team_sizes.end()) {
-			cout << "Team size " << p.first << ": " << p.second << " teams" << endl;
+			cout << "Team size " << p.first << ": " << p.second << " sols" << endl;
 		} else {
-			cout << "Team size " << p.first << ": " << p.second << " teams*" << endl;
+			cout << "Team size " << p.first << ": " << p.second << " sols*" << endl;
 		}
 	}
 	cout << endl;
-	ld T_start = 100, T_end = 95, ignition_factor = 50;
-	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
-	bool search_deltas = true;
 	if (sz(int_delta_team_sizes) == 0) {
-		cout << "No integer deltas found" << endl;
+		cout << "No integer deltas found" << endl << endl;
+		ld previous_score = 1e18;
 		FORE (team_size, team_sizes) {
 			vector<OptimizedGraph> Gs_filtered;
 			FOR (i, sz(Gs)) {
@@ -354,12 +356,27 @@ void final_solve(Result &result, ld target_score) {
 					Gs_filtered.pb(Gs[i]);
 				}
 			}
-			cout << "Trying team size " << team_size.first << ": " << sz(Gs_filtered) << " teams" << endl << endl;
-			G = optimize(G, team_size.first, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs_filtered);
+			cout << "Trying team size " << team_size.first << ": " << sz(Gs_filtered) << " sols" << endl;
+			bool delta = false;
+			tie(G, delta) = optimize(G, team_size.first, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs_filtered);
 			optimized_write_output(G);
+			if (G.score <= target_score + 1e-9) {
+				cout << "Target score reached" << endl;
+			} elif (G.score < result.local_score) {
+				cout << "Local score beat" << endl;
+			}
+			if (delta) {
+				cout << "Delta found, terminating" << endl << endl;
+				break;
+			} elif (previous_score < G.score) {
+				cout << "Score increased, terminating" << endl << endl;
+				break;
+			}
+			cout << endl;
+			previous_score = G.score;
 		}
 	} else {
-		cout << "Integer deltas found" << endl;
+		cout << "Integer deltas found" << endl << endl;
 		FORE (team_size, int_delta_team_sizes) {
 			vector<OptimizedGraph> Gs_filtered;
 			FOR (i, sz(Gs)) {
@@ -367,8 +384,8 @@ void final_solve(Result &result, ld target_score) {
 					Gs_filtered.pb(Gs[i]);
 				}
 			}
-			cout << "Trying team size " << team_size << ": " << sz(Gs_filtered) << " teams" << endl << endl;
-			G = optimize(G, team_size, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs_filtered);
+			cout << "Trying team size " << team_size << ": " << sz(Gs_filtered) << " sols" << endl;
+			tie(G, ignore) = optimize(G, team_size, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs_filtered);
 			optimized_write_output(G);
 			if (G.score <= target_score + 1e-9) {
 				cout << "Target score reached" << endl;
@@ -381,7 +398,7 @@ void final_solve(Result &result, ld target_score) {
 }
 
 int main() {
-	cout.precision(10);
+	cout.precision(15);
 	auto start = chrono::high_resolution_clock::now();
 	while (true) {
 		srand(time(NULL));
