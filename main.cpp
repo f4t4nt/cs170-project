@@ -59,6 +59,7 @@ OptimizedGraph optimized_random_assignment(OptimizedGraph &G_in, short team_coun
 		G.node_teams[i] = rand() % team_count;
 		G.team_sizes[G.node_teams[i]]++;
 	}
+	G.lock_distribution= false;
 	return G;
 }
 
@@ -137,8 +138,17 @@ struct OptimizedBlacksmithController {
 		if (sz(Gs) == 0) {
 			if (preserve_dist) {
 				FOR (i, population_size) {
-					population[i] = {optimized_random_assignment(G_in, team_count), T_start};
-					optimized_get_score(population[i].G);
+					if (population[i].G.lock_distribution) {
+						FOR (_, 10000) {
+							short node1 = rand() % population[i].G.invariant->V;
+							short node2 = rand() % population[i].G.invariant->V;
+							swap(population[i].G.node_teams[node1], population[i].G.node_teams[node2]);
+						}
+						optimized_get_score(population[i].G);
+					} else {
+						population[i] = {optimized_random_assignment(G_in, team_count), T_start};
+						optimized_get_score(population[i].G);
+					}
 				}
 			} else {
 				FOR (i, population_size) {
@@ -290,8 +300,8 @@ pair<OptimizedGraph, bool> optimize(
 void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
-	optimized_read_graph(G, result.size, result.id, "nightfall");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "nightfall");
+	optimized_read_graph(G, result.size, result.id, "midas");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "midas");
 	map<ll, ll> team_sizes;
 	ll elite = min((ll) sz(Gs), 128ll), idx = 0, int_deltas = 0;
 	set<ll> int_delta_team_sizes;	
@@ -329,8 +339,9 @@ void final_solve(Result &result, ld target_score) {
 		}
 		idx++;
 	}
-	short population_sz = 512;
-	ld T_start = 100, T_end = 95, ignition_factor = 50;
+	Gs = Gs_;
+	short population_sz = 1024;
+	ld T_start = 100, T_end = 95, ignition_factor = 200;
 	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
 	bool search_deltas = true;
 	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
@@ -338,6 +349,14 @@ void final_solve(Result &result, ld target_score) {
 	cout << "Best score: " << Gs[0].score << endl;
 	cout << "Worst score: " << Gs.back().score << endl;
 	cout << endl;
+	if (sz(team_sizes) < 3 && sz(int_delta_team_sizes) == 0) {
+		cout << "Not enough team sizes, adding another team size" << endl << endl;
+		ll min_team_size = (team_sizes.begin())->first - 1;
+		OptimizedGraph G_tmp = optimized_random_assignment(G, min_team_size);
+		optimized_get_score(G_tmp);
+		Gs.pb(G_tmp);
+		team_sizes[min_team_size]++;
+	}
 	FORE (p, team_sizes) {
 		if (int_delta_team_sizes.find(p.first) == int_delta_team_sizes.end()) {
 			cout << "Team size " << p.first << ": " << p.second << " sols" << endl;
