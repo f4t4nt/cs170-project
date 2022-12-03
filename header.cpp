@@ -323,6 +323,7 @@ void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
 		}
 	}
 	optimized_get_score(a);
+	a.lock_distribution = false;
 }
 
 void set_io(str file, str run_type = "") {
