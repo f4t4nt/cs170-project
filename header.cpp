@@ -141,6 +141,7 @@ struct OptimizedGraph {
 	vector<ld> B_vec;
 	vector<ch> node_teams;
 	vector<short> team_sizes;
+	bool lock_distribution = false;
 };
 
 struct Result {

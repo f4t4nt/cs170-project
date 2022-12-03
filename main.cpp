@@ -164,9 +164,18 @@ struct OptimizedBlacksmithController {
 			auto &agent = population[i];
 			agent.T = T_start;
 			while (agent.T > T_end) {
-				FOR (j, 250) {
-					agent.stepSingle();
-					agent.stepSwap();
+				if (agent.G.lock_distribution) {
+					FOR (j, 500) {
+						agent.stepSwap();
+					}
+				} else {
+					ll singles = rand() % 500;
+					FOR (j, singles) {
+						agent.stepSingle();
+					}
+					FOB (j, singles, 500) {
+						agent.stepSwap();
+					}
 				}
 				agent.T *= 0.999;
 			}
@@ -233,11 +242,16 @@ OptimizedGraph optimize(
 			optimized_write_output(G);
 			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 2 - 1].G.score << ", temperature " << smith.T_start << endl;
 			if (search_deltas) {
+				bool found_delta = false;
 				FOR (j, population_size) {
 					auto &agent = smith.population[j];
 					if (round(agent.G.score - target_score) == agent.G.score - target_score) {
-						cout << "Found a score with an integer delta score" << endl;
-						optimized_write_output(agent.G, true);
+						if (!found_delta) {
+							optimized_write_output(agent.G, true);
+							cout << "Found delta " << agent.G.score - target_score << endl;
+							found_delta = true;
+						}
+						agent.G.lock_distribution = true;
 					}
 				}
 			}
@@ -276,13 +290,19 @@ void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
 	short population_sz = 1024;
-	optimized_read_graph(G, result.size, result.id, "da_best");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "da_best");
+	optimized_read_graph(G, result.size, result.id, "nightfall");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "nightfall");
 	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
 	map<ll, ll> team_sizes;
 	ll elite = min((ll) sz(Gs), 128ll), idx = 0, int_deltas = 0;
+	set<ll> int_delta_team_sizes;	
 	while (idx < elite) {
 		team_sizes[Gs[idx].invariant->T]++;
+		if (Gs[idx].score - target_score == round(Gs[idx].score - target_score)) {
+			Gs[idx].lock_distribution = true;
+			int_deltas++;
+			int_delta_team_sizes.insert(Gs[idx].invariant->T);
+		}
 		Gs_.pb(Gs[idx]);
 		idx++;
 	}
@@ -292,63 +312,72 @@ void final_solve(Result &result, ld target_score) {
 			team_sizes[Gs[idx].invariant->T]++;
 			Gs_.pb(Gs[idx]);
 		} elif (Gs[idx].score - target_score == round(Gs[idx].score - target_score)) {
+			Gs[idx].lock_distribution = true;
 			Gs_.pb(Gs[idx]);
 			team_sizes[Gs[idx].invariant->T]++;
 			int_deltas++;
+			int_delta_team_sizes.insert(Gs[idx].invariant->T);
 		}
 		idx++;
 	}
 	while (idx < sz(Gs)) {
 		if (Gs[idx].score - target_score == round(Gs[idx].score - target_score)) {
+			Gs[idx].lock_distribution = true;
 			Gs_.pb(Gs[idx]);
 			team_sizes[Gs[idx].invariant->T]++;
 			int_deltas++;
+			int_delta_team_sizes.insert(Gs[idx].invariant->T);
 		}
 		idx++;
 	}
-	/* stupidest way of fixing this but w/e XD */
-	pair<ll, ll> most_frequent_team = {-1, -1};
-	FORE (p, team_sizes) {
-		if (p.second > most_frequent_team.second) {
-			most_frequent_team = p;
-		}
-	}
-	idx = 0;
-	while (idx < sz(Gs_)) {
-		if (Gs_[idx].invariant->T != most_frequent_team.first) {
-			Gs_.erase(Gs_.begin() + idx);
-		} else {
-			idx++;
-		}
-	}
-	team_sizes.clear();
-	FORE (g, Gs_) {
-		team_sizes[g.invariant->T]++;
-	}
-	/* --------------------------------------- */
-	Gs = Gs_;
-	cout << "Using " << sz(Gs) << " graphs" << endl;
-	FORE (p, team_sizes) {
-		cout << "Team size " << p.first << ": " << p.second << endl;
-	}
-	cout << endl;
-	cout << "Integer deltas: " << int_deltas << endl;
-	cout << endl;
 	cout << "Target score " << target_score << endl;
 	cout << "Best score: " << Gs[0].score << endl;
 	cout << "Worst score: " << Gs.back().score << endl;
 	cout << endl;
-	ld T_start = 100, T_end = 95, ignition_factor = 10;
-	ll idle_steps = 19, generations = 1000000, stagnation_limit = 4;
-	bool search_deltas = true;
-	G = optimize(G, Gs[0].invariant->T, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs);
-	if (G.score <= target_score + 1e-9) {
-		cout << "Target score reached" << endl;
-	} elif (G.score < result.local_score) {
-		cout << "Local score beat" << endl;
+	FORE (p, team_sizes) {
+		if (int_delta_team_sizes.find(p.first) == int_delta_team_sizes.end()) {
+			cout << "Team size " << p.first << ": " << p.second << " teams" << endl;
+		} else {
+			cout << "Team size " << p.first << ": " << p.second << " teams*" << endl;
+		}
 	}
 	cout << endl;
-	optimized_write_output(G);
+	ld T_start = 100, T_end = 95, ignition_factor = 50;
+	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
+	bool search_deltas = true;
+	if (sz(int_delta_team_sizes) == 0) {
+		cout << "No integer deltas found" << endl;
+		FORE (team_size, team_sizes) {
+			vector<OptimizedGraph> Gs_filtered;
+			FOR (i, sz(Gs)) {
+				if (Gs[i].invariant->T == team_size.first) {
+					Gs_filtered.pb(Gs[i]);
+				}
+			}
+			cout << "Trying team size " << team_size.first << ": " << sz(Gs_filtered) << " teams" << endl << endl;
+			G = optimize(G, team_size.first, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs_filtered);
+			optimized_write_output(G);
+		}
+	} else {
+		cout << "Integer deltas found" << endl;
+		FORE (team_size, int_delta_team_sizes) {
+			vector<OptimizedGraph> Gs_filtered;
+			FOR (i, sz(Gs)) {
+				if (Gs[i].invariant->T == team_size) {
+					Gs_filtered.pb(Gs[i]);
+				}
+			}
+			cout << "Trying team size " << team_size << ": " << sz(Gs_filtered) << " teams" << endl << endl;
+			G = optimize(G, team_size, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas, Gs_filtered);
+			optimized_write_output(G);
+			if (G.score <= target_score + 1e-9) {
+				cout << "Target score reached" << endl;
+			} elif (G.score < result.local_score) {
+				cout << "Local score beat" << endl;
+			}
+			cout << endl;
+		}
+	}
 }
 
 int main() {
