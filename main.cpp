@@ -381,6 +381,7 @@ void final_solve(Result &result, ld target_score) {
 }
 
 int main() {
+	cout.precision(10);
 	auto start = chrono::high_resolution_clock::now();
 	while (true) {
 		srand(time(NULL));
