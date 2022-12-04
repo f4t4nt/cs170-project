@@ -229,10 +229,8 @@ struct OptimizedBlacksmithController {
 			ll other;
 			do {
 				other = rand() % half;
-			} while (population[other].G.invariant->T != population[i].G.invariant->T);
-			if (other != i) {
-				optimized_cross(population[i].G, population[rand() % half].G);
-			}
+			} while (other != i);
+			optimized_cross(population[i].G, population[rand() % half].G);
 		}
 	}
 };
@@ -282,7 +280,7 @@ pair<OptimizedGraph, bool> optimize(
 			delta = false;
 
 			FOR (j, population_size) {
-					smith.population[j].G.lock_distribution = false;
+				smith.population[j].G.lock_distribution = false;
 			}
 		} else {
 			FOR (j, population_size) {
@@ -329,8 +327,7 @@ pair<OptimizedGraph, bool> optimize(
 					cout << "Ionizing" << endl;
 				}
 
-				if (delta && !reset_temp)
-				{
+				if (delta && !reset_temp) {
 					reset_temp = true;
 					smith.T_start *= 10;
 					smith.T_end *= 10;
@@ -405,6 +402,10 @@ void final_solve(Result &result, ld target_score) {
 			int_delta_team_sizes.insert(Gs[idx].invariant->T);
 		}
 		idx++;
+	}
+
+	if (Gs[0].score < target_score) {
+		return;
 	}
 
 	Gs = Gs_;
