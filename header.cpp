@@ -142,6 +142,7 @@ struct OptimizedGraph {
 	vector<ch> node_teams;
 	vector<short> team_sizes;
 	bool lock_distribution = false;
+	bool unchanged = false;
 };
 
 struct Result {
@@ -290,42 +291,17 @@ ld optimized_update_swap_score(OptimizedGraph &G, short node1, short node2) {
 }
 
 void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
-	// short start = rand() % a.invariant->V, end = rand() % a.invariant->V;
-	// if (start < end) {
-	// 	FOB (node, start, end) {
-	// 		ch old_team = a.node_teams[node];
-	// 		ch new_team = b.node_teams[node];
-	// 		a.node_teams[node] = new_team;
-	// 		a.team_sizes[old_team]--;
-	// 		a.team_sizes[new_team]++;
-	// 	}
-	// } else {
-	// 	FOB (node, start, a.invariant->V) {
-	// 		ch old_team = a.node_teams[node];
-	// 		ch new_team = b.node_teams[node];
-	// 		a.node_teams[node] = new_team;
-	// 		a.team_sizes[old_team]--;
-	// 		a.team_sizes[new_team]++;
-	// 	}
-	// 	FOR (node, end) {
-	// 		ch old_team = a.node_teams[node];
-	// 		ch new_team = b.node_teams[node];
-	// 		a.node_teams[node] = new_team;
-	// 		a.team_sizes[old_team]--;
-	// 		a.team_sizes[new_team]++;
-	// 	}
-	// }
-	FOR (node, a.invariant->V) {
-		if (rand() % 2) {
-			ch old_team = a.node_teams[node];
-			ch new_team = b.node_teams[node];
-			a.node_teams[node] = new_team;
-			a.team_sizes[old_team]--;
-			a.team_sizes[new_team]++;
-		}
-	}
-	optimized_get_score(a);
-	a.lock_distribution = false;
+    short idx = rand() % a.invariant->V, end = rand() % a.invariant->V;
+    while (idx != end) {
+        ch old_team = a.node_teams[idx];
+        ch new_team = b.node_teams[idx];
+        a.node_teams[idx] = new_team;
+        a.team_sizes[old_team]--;
+        a.team_sizes[new_team]++;
+        idx = (idx + 7) % a.invariant->V;
+    }
+    optimized_get_score(a);
+    a.lock_distribution = false;
 }
 
 void set_io(str file, str run_type = "") {
