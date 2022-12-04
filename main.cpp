@@ -229,10 +229,8 @@ struct OptimizedBlacksmithController {
 			ll other;
 			do {
 				other = rand() % half;
-			} while (population[other].G.invariant->T != population[i].G.invariant->T);
-			if (other != i) {
-				optimized_cross(population[i].G, population[rand() % half].G);
-			}
+			} while (other != i);
+			optimized_cross(population[i].G, population[rand() % half].G);
 		}
 	}
 };
