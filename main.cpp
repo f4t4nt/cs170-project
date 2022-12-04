@@ -76,7 +76,7 @@ struct OptimizedAnnealingAgent {
 	}
 
 	bool stepSingle(int retries = 10) {
-		int i = 10;
+		int i = retries;
 		while(i--) {
 			short node = rand() % G.invariant->V;
 			ch old_team = G.node_teams[node];
@@ -114,6 +114,7 @@ struct OptimizedAnnealingAgent {
 
 		return false;
 	}
+
 	short stepSwap(size_t retries, short node1 = -1) {
 		size_t i = retries;
 		while(i--) {
@@ -151,7 +152,7 @@ struct OptimizedAnnealingAgent {
 		bool changed = false;
 		short node1 = rand() % G.invariant->V;
 		FOR (i, n) {
-			auto tmp = stepSwap(5, node1);
+			auto tmp = stepSwap(swap_retries, node1);
 			if (node1 != tmp) {
 				return changed;
 			} else {
@@ -228,15 +229,15 @@ struct OptimizedBlacksmithController {
 			while(retries--) {
 				agent.T = T_start;
 				while (agent.T > T_end) {
+					size_t sl = start_score == agent.G.score ? swap_limit : fast_swap_limit;
 					if (agent.G.lock_distribution) {
 						size_t parts = start_score == agent.G.score ? ld_limit : ld_fast_limit;
 						FOR (j, parts) {
-							agent.stepSwapChain(5, swap_limit);
+							agent.stepSwapChain(sl, swap_limit);
 						}
 					} else {
 						size_t parts = start_score == agent.G.score ? non_ld_limit : non_ld_fast_limit;
 						size_t ml = start_score == agent.G.score ? move_limit : fast_move_limit;
-						size_t sl = start_score == agent.G.score ? swap_limit : fast_swap_limit;
 						size_t singles = rand() % parts;
 						FOR (j, singles) {
 							agent.stepSingle(ml);
