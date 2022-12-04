@@ -295,7 +295,7 @@ pair<OptimizedGraph, bool> optimize(
 
 		if (i % batch_steps == 0) {
 			optimized_write_output(G);
-			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 2 - 1].G.score << ", temperature " << smith.T_start << endl;
+			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 4 - 1].G.score << ", temperature " << smith.T_start << endl;
 			if (search_deltas) {
 				bool found_delta = false;
 				FOR (j, population_size) {

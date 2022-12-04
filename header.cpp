@@ -290,33 +290,24 @@ ld optimized_update_swap_score(OptimizedGraph &G, short node1, short node2) {
 }
 
 void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
-	short start = rand() % a.invariant->V, end = rand() % a.invariant->V;
-	if (start < end) {
-		FOB (node, start, end) {
-			ch old_team = a.node_teams[node];
-			ch new_team = b.node_teams[node];
-			a.node_teams[node] = new_team;
-			a.team_sizes[old_team]--;
-			a.team_sizes[new_team]++;
-		}
-	} else {
-		FOB (node, start, a.invariant->V) {
-			ch old_team = a.node_teams[node];
-			ch new_team = b.node_teams[node];
-			a.node_teams[node] = new_team;
-			a.team_sizes[old_team]--;
-			a.team_sizes[new_team]++;
-		}
-		FOR (node, end) {
-			ch old_team = a.node_teams[node];
-			ch new_team = b.node_teams[node];
-			a.node_teams[node] = new_team;
-			a.team_sizes[old_team]--;
-			a.team_sizes[new_team]++;
-		}
-	}
-	// FOR (node, a.invariant->V) {
-	// 	if (rand() % 2) {
+	// short start = rand() % a.invariant->V, end = rand() % a.invariant->V;
+	// if (start < end) {
+	// 	FOB (node, start, end) {
+	// 		ch old_team = a.node_teams[node];
+	// 		ch new_team = b.node_teams[node];
+	// 		a.node_teams[node] = new_team;
+	// 		a.team_sizes[old_team]--;
+	// 		a.team_sizes[new_team]++;
+	// 	}
+	// } else {
+	// 	FOB (node, start, a.invariant->V) {
+	// 		ch old_team = a.node_teams[node];
+	// 		ch new_team = b.node_teams[node];
+	// 		a.node_teams[node] = new_team;
+	// 		a.team_sizes[old_team]--;
+	// 		a.team_sizes[new_team]++;
+	// 	}
+	// 	FOR (node, end) {
 	// 		ch old_team = a.node_teams[node];
 	// 		ch new_team = b.node_teams[node];
 	// 		a.node_teams[node] = new_team;
@@ -324,6 +315,16 @@ void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
 	// 		a.team_sizes[new_team]++;
 	// 	}
 	// }
+	vector<ch> team_map(a.invariant->T);
+	iota(all(team_map), 0);
+	sshuffle(team_map);
+	FOR (i, a.invariant->V) {
+		if (b.node_teams[i] == team_map[a.node_teams[i]]) {
+			a.team_sizes[a.node_teams[i]]--;
+			a.team_sizes[b.node_teams[i]]++;
+			a.node_teams[i] = b.node_teams[i];
+		}
+	}
 	optimized_get_score(a);
 	a.lock_distribution = false;
 }
