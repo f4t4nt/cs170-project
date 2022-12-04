@@ -329,8 +329,7 @@ pair<OptimizedGraph, bool> optimize(
 					cout << "Ionizing" << endl;
 				}
 
-				if (delta && !reset_temp)
-				{
+				if (delta && !reset_temp) {
 					reset_temp = true;
 					smith.T_start *= 10;
 					smith.T_end *= 10;
@@ -405,6 +404,10 @@ void final_solve(Result &result, ld target_score) {
 			int_delta_team_sizes.insert(Gs[idx].invariant->T);
 		}
 		idx++;
+	}
+
+	if (Gs[0].score < target_score) {
+		return;
 	}
 
 	Gs = Gs_;
