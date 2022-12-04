@@ -360,7 +360,7 @@ void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
 	char *compute_name = getenv("HOSTNAME");
-	if (compute_name) {
+	if (!compute_name) {
 		compute_name = getenv("COMPUTERNAME");
 	}
 
