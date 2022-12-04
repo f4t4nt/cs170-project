@@ -1,4 +1,7 @@
 #include "extras.cpp"
+#include <limits.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 OptimizedGraph optimized_coloring_threshold(OptimizedGraph G) {
 	G.score = INF;
@@ -71,37 +74,40 @@ struct OptimizedAnnealingAgent {
 		T = T0;
 	}
 	void stepSingle() {
-		short node = rand() % G.invariant->V;
-		ch old_team = G.node_teams[node];
-		ch new_team = rand() % G.invariant->T;
-		while (new_team == old_team) {
-			new_team = rand() % G.invariant->T;
-		}
-		ld C_w, B, B_norm_squared, B_old, B_new;
-		tie(C_w, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
-		ld new_score = C_w + G.K + B;
-		if (new_score < G.score) {
-			G.node_teams[node] = new_team;
-			G.team_sizes[old_team]--;
-			G.team_sizes[new_team]++;
-			G.B_vec[old_team] = B_old;
-			G.B_vec[new_team] = B_new;
-			G.score = new_score;
-			G.C_w = C_w;
-			G.B_norm_squared = B_norm_squared;
-			return;
-		}
-		ld p = exp((G.score - new_score) / T);
-		if (rand() < p * 32767) {
-			G.node_teams[node] = new_team;
-			G.team_sizes[old_team]--;
-			G.team_sizes[new_team]++;
-			G.B_vec[old_team] = B_old;
-			G.B_vec[new_team] = B_new;
-			G.score = new_score;
-			G.C_w = C_w;
-			G.B_norm_squared = B_norm_squared;
-			return;
+		int i = 10;
+		while(i--) {
+			short node = rand() % G.invariant->V;
+			ch old_team = G.node_teams[node];
+			ch new_team = rand() % G.invariant->T;
+			while (new_team == old_team) {
+				new_team = rand() % G.invariant->T;
+			}
+			ld C_w, B, B_norm_squared, B_old, B_new;
+			tie(C_w, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
+			ld new_score = C_w + G.K + B;
+			if (new_score < G.score) {
+				G.node_teams[node] = new_team;
+				G.team_sizes[old_team]--;
+				G.team_sizes[new_team]++;
+				G.B_vec[old_team] = B_old;
+				G.B_vec[new_team] = B_new;
+				G.score = new_score;
+				G.C_w = C_w;
+				G.B_norm_squared = B_norm_squared;
+				return;
+			}
+			ld p = exp((G.score - new_score) / T);
+			if (rand() < p * 32767) {
+				G.node_teams[node] = new_team;
+				G.team_sizes[old_team]--;
+				G.team_sizes[new_team]++;
+				G.B_vec[old_team] = B_old;
+				G.B_vec[new_team] = B_new;
+				G.score = new_score;
+				G.C_w = C_w;
+				G.B_norm_squared = B_norm_squared;
+				return;
+			}
 		}
 	}
 	short stepSwap(short node1 = -1) {
@@ -112,6 +118,7 @@ struct OptimizedAnnealingAgent {
 		while (node1 == node2 || G.node_teams[node1] == G.node_teams[node2]) {
 			node2 = rand() % G.invariant->V;
 		}
+
 		ld C_w = optimized_update_swap_score(G, node1, node2);
 		ld new_score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
 		if (new_score < G.score) {
@@ -196,18 +203,27 @@ struct OptimizedBlacksmithController {
 						agent.stepSwap();
 					}
 				}
-				agent.T *= 0.999;
+
+				agent.T *= 0.99;
 			}
 		}
+
 		T_start *= 0.99;
 		T_end *= 0.99;
 	}
 	void step_and_prune() {
 		step();
 		sort(all(population), [](OptimizedAnnealingAgent &a, OptimizedAnnealingAgent &b) {
-			return a.G.lock_distribution > b.G.lock_distribution || (a.G.lock_distribution == b.G.lock_distribution && a.G.score < b.G.score);
+			if (a.G.lock_distribution == b.G.lock_distribution) {
+				return a.G.score < b.G.score;
+			} else if (abs(a.G.score - b.G.score) < a.G.score * 0.1) {
+				return a.G.lock_distribution > b.G.lock_distribution;
+			} else {
+				return a.G.score < b.G.score;
+			}
 		});
-		ll half = sz(population) / 2;
+
+		ll half = sz(population) / 4;
 		FOB (i, half, sz(population)) {
 			population[i] = population[rand() % half];
 			ll other;
@@ -248,6 +264,8 @@ pair<OptimizedGraph, bool> optimize(
 	smith.T_start = T_start0;
 	smith.T_end = T_end0;
 	ll batch_steps = (idle_steps + 1) * 5;
+	bool reset_temp = false;
+
 	FOR (i, generations) {
 		smith.step_and_prune();
 		auto population_best = smith.population[0].G;
@@ -257,6 +275,26 @@ pair<OptimizedGraph, bool> optimize(
 				G = population_best;
 			}
 		}
+
+		if (target_score >= best_score && search_deltas) {
+			target_score = best_score;
+			search_deltas = false;
+			delta = false;
+
+			FOR (j, population_size) {
+					smith.population[j].G.lock_distribution = false;
+			}
+		} else {
+			FOR (j, population_size) {
+				auto &agent = smith.population[j];
+				if (target_score > 0 && round(agent.G.score - target_score) == agent.G.score - target_score) {
+					agent.G.lock_distribution = true;
+				} else {
+					agent.G.lock_distribution = false;
+				}
+			}
+		}
+
 		if (i % batch_steps == 0) {
 			optimized_write_output(G);
 			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 2 - 1].G.score << ", temperature " << smith.T_start << endl;
@@ -264,16 +302,14 @@ pair<OptimizedGraph, bool> optimize(
 				bool found_delta = false;
 				FOR (j, population_size) {
 					auto &agent = smith.population[j];
-					if (round(agent.G.score - target_score) == agent.G.score - target_score) {
+					if (target_score > 0 && round(agent.G.score - target_score) == agent.G.score - target_score) {
 						if (!found_delta) {
 							optimized_write_output(agent.G, true);
 							cout << "Found delta " << agent.G.score - target_score << endl;
 							found_delta = true;
 							delta = true;
 						}
-						agent.G.lock_distribution = true;
-					} else {
-						agent.G.lock_distribution = false;
+						agent.G.lock_distribution = search_deltas;
 					}
 				}
 			}
@@ -292,6 +328,18 @@ pair<OptimizedGraph, bool> optimize(
 					smith.init(G, team_count, population_size, T_start0, T_end0);
 					cout << "Ionizing" << endl;
 				}
+
+				if (delta && !reset_temp)
+				{
+					reset_temp = true;
+					smith.T_start *= 10;
+					smith.T_end *= 10;
+				}
+
+				if (!delta && (best_score - target_score) > target_score * 0.2) {
+					break;
+				}
+
 				best_score = 1e18;
 			}
 			if (G.score <= target_score && extended) {
@@ -311,8 +359,14 @@ pair<OptimizedGraph, bool> optimize(
 void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
-	optimized_read_graph(G, result.size, result.id, "rocky");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "rocky");
+	char *compute_name = getenv("HOSTNAME");
+	if (compute_name) {
+		compute_name = getenv("COMPUTERNAME");
+	}
+
+	string comp_name = string(compute_name);
+	optimized_read_graph(G, result.size, result.id, comp_name);
+	Gs = optimized_read_local_graphs(G, result.size, result.id, comp_name);
 	map<ll, ll> team_sizes;
 	ll elite = min((ll) sz(Gs), 128ll), idx = 0, int_deltas = 0;
 	set<ll> int_delta_team_sizes;	
@@ -326,6 +380,7 @@ void final_solve(Result &result, ld target_score) {
 		Gs_.pb(Gs[idx]);
 		idx++;
 	}
+
 	while (idx < sz(Gs) && sz(team_sizes) < 3) {
 		if (team_sizes.find(Gs[idx].invariant->T) == team_sizes.end() ||
 			team_sizes[Gs[idx].invariant->T] < 8) {
@@ -340,6 +395,7 @@ void final_solve(Result &result, ld target_score) {
 		}
 		idx++;
 	}
+
 	while (idx < sz(Gs)) {
 		if (Gs[idx].score - target_score == round(Gs[idx].score - target_score)) {
 			Gs[idx].lock_distribution = true;
@@ -350,16 +406,20 @@ void final_solve(Result &result, ld target_score) {
 		}
 		idx++;
 	}
+
 	Gs = Gs_;
 	short population_sz = 1024;
 	ld T_start = 100, T_end = 95, ignition_factor = 200;
 	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
 	bool search_deltas = true;
+
 	cout << "Final solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
 	cout << "Target score " << target_score << endl;
 	cout << "Best score: " << Gs[0].score << endl;
 	cout << "Worst score: " << Gs.back().score << endl;
 	cout << endl;
+
+	target_score = min(target_score, Gs[0].score);
 	if (sz(team_sizes) < 3 && sz(int_delta_team_sizes) == 0) {
 		cout << "Not enough team sizes, adding another team size" << endl << endl;
 		ll min_team_size = (team_sizes.begin())->first - 1;
