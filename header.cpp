@@ -291,17 +291,17 @@ ld optimized_update_swap_score(OptimizedGraph &G, short node1, short node2) {
 }
 
 void optimized_cross(OptimizedGraph &a, const OptimizedGraph &b) {
-    short idx = rand() % a.invariant->V, end = rand() % a.invariant->V;
-    while (idx != end) {
-        ch old_team = a.node_teams[idx];
-        ch new_team = b.node_teams[idx];
-        a.node_teams[idx] = new_team;
-        a.team_sizes[old_team]--;
-        a.team_sizes[new_team]++;
-        idx = (idx + 7) % a.invariant->V;
-    }
-    optimized_get_score(a);
-    a.lock_distribution = false;
+	short idx = rand() % a.invariant->V, end = rand() % a.invariant->V;
+	while (idx != end) {
+		ch old_team = a.node_teams[idx];
+		ch new_team = b.node_teams[idx];
+		a.node_teams[idx] = new_team;
+		a.team_sizes[old_team]--;
+		a.team_sizes[new_team]++;
+		idx = (idx + 19) % a.invariant->V;
+	}
+	optimized_get_score(a);
+	a.lock_distribution = false;
 }
 
 void set_io(str file, str run_type = "") {

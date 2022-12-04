@@ -152,7 +152,7 @@ struct OptimizedBlacksmithController {
 		T_start = T_start0;
 		T_end = T_end0;
 		if (sz(Gs) == 0) {
-			if (preserve_dist) {
+			if (!preserve_dist) {
 				FOR (i, population_size) {
 					if (population[i].G.lock_distribution) {
 						FOR (_, 10000) {
@@ -254,13 +254,7 @@ pair<OptimizedGraph, bool> optimize(
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
 	OptimizedBlacksmithController smith;
-	smith.init(G, team_count, population_size, 1, 0.9, Gs);
-	FOR (i, idle_steps) {
-		smith.step();
-	}
-	smith.step_and_prune();
-	smith.T_start = T_start0;
-	smith.T_end = T_end0;
+	smith.init(G, team_count, population_size, T_start0, T_end0, Gs);
 	ll batch_steps = (idle_steps + 1) * 5;
 	bool reset_temp = false;
 
@@ -295,7 +289,7 @@ pair<OptimizedGraph, bool> optimize(
 
 		if (i % batch_steps == 0) {
 			optimized_write_output(G);
-			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 2 - 1].G.score << ", temperature " << smith.T_start << endl;
+			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 4 - 1].G.score << ", temperature " << smith.T_start << endl;
 			if (search_deltas) {
 				bool found_delta = false;
 				FOR (j, population_size) {
@@ -351,6 +345,43 @@ pair<OptimizedGraph, bool> optimize(
 		i += idle_steps;
 	}
 	return {G, delta};
+}
+
+void basic_solve(Result &result, ld target_score) {
+	OptimizedGraph G;
+	char *compute_name = getenv("HOSTNAME");
+	if (!compute_name) {
+		compute_name = getenv("COMPUTERNAME");
+	}
+
+	string comp_name = string(compute_name);
+	optimized_read_graph(G, result.size, result.id, comp_name);
+
+	short population_sz = 1024;
+	ld T_start = 100, T_end = 95, ignition_factor = 200;
+	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
+	bool search_deltas = true;
+
+	cout << "Basic solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
+	cout << "Target score " << target_score << endl << endl;
+
+	ch team_count = max_teams(result.best_score);
+	ld prev_score = INF;
+
+	while (team_count >= 2 && G.score < prev_score) {
+		cout << "Team size " << team_count - 0 << endl;
+		init_teams(G, team_count);
+		prev_score = G.score;
+		tie(G, ignore) = optimize(G, team_count, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas);
+		optimized_write_output(G);
+		if (G.score <= target_score + 1e-9) {
+			cout << "Target score reached" << endl;
+		} elif (G.score < result.local_score) {
+			cout << "Local score beat" << endl;
+		}
+		cout << endl;
+		team_count--;
+	}
 }
 
 void final_solve(Result &result, ld target_score) {
@@ -495,7 +526,7 @@ int main() {
 		srand(time(NULL));
 		vector<Result> results = read_queue();
 		FORE (result, results) {
-			final_solve(result, result.best_score);
+			basic_solve(result, result.best_score);
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
