@@ -282,7 +282,7 @@ pair<OptimizedGraph, bool> optimize(
 			delta = false;
 
 			FOR (j, population_size) {
-					smith.population[j].G.lock_distribution = false;
+				smith.population[j].G.lock_distribution = false;
 			}
 		} else {
 			FOR (j, population_size) {
