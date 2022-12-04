@@ -407,6 +407,10 @@ void final_solve(Result &result, ld target_score) {
 		idx++;
 	}
 
+	if (Gs[0].score < target_score) {
+		return;
+	}
+
 	Gs = Gs_;
 	short population_sz = 1024;
 	ld T_start = 100, T_end = 95, ignition_factor = 200;
