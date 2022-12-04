@@ -353,7 +353,7 @@ void basic_solve(Result &result, ld target_score) {
 	if (!compute_name) {
 		compute_name = getenv("COMPUTERNAME");
 	}
-	G.score = INF;
+	G.score = 1e18;
 
 	string comp_name = string(compute_name);
 	optimized_read_graph(G, result.size, result.id, comp_name);
