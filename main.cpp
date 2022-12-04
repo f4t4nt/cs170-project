@@ -329,8 +329,7 @@ pair<OptimizedGraph, bool> optimize(
 					cout << "Ionizing" << endl;
 				}
 
-				if (delta && !reset_temp)
-				{
+				if (delta && !reset_temp) {
 					reset_temp = true;
 					smith.T_start *= 10;
 					smith.T_end *= 10;
