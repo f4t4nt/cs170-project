@@ -265,10 +265,6 @@ ld optimized_update_swap_score(OptimizedGraph &G, short node1, short node2) {
 	while (i < end) {
 		short target, weight;
 		tie(ignore, target, weight) = edges[i];
-		if (target == node2) {
-			i++;
-			continue;
-		}
 		auto target_team = G.node_teams[target];
 		if (target_team == G.node_teams[node1]) {
 			C_w -= weight;
@@ -281,10 +277,6 @@ ld optimized_update_swap_score(OptimizedGraph &G, short node1, short node2) {
 	while (i < end) {
 		short target, weight;
 		tie(ignore, target, weight) = edges[i];
-		if (target == node1) {
-			i++;
-			continue;
-		}
 		auto target_team = G.node_teams[target];
 		if (target_team == G.node_teams[node2]) {
 			C_w -= weight;
@@ -293,6 +285,7 @@ ld optimized_update_swap_score(OptimizedGraph &G, short node1, short node2) {
 		}
 		i++;
 	}
+	C_w -= 2 * G.invariant->weights[node1][node2];
 	return C_w;
 }
 

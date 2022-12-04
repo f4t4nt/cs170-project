@@ -104,8 +104,10 @@ struct OptimizedAnnealingAgent {
 			return;
 		}
 	}
-	void stepSwap() {
-		short node1 = rand() % G.invariant->V;
+	short stepSwap(short node1 = -1) {
+		if (node1 == -1) {
+			node1 = rand() % G.invariant->V;
+		}
 		short node2 = rand() % G.invariant->V;
 		while (node1 == node2 || G.node_teams[node1] == G.node_teams[node2]) {
 			node2 = rand() % G.invariant->V;
@@ -116,14 +118,21 @@ struct OptimizedAnnealingAgent {
 			swap(G.node_teams[node1], G.node_teams[node2]);
 			G.score = new_score;
 			G.C_w = C_w;
-			return;
+			return node1;
 		}
 		ld p = exp((G.score - new_score) / T);
 		if (rand() < p * 32767) {
 			swap(G.node_teams[node1], G.node_teams[node2]);
 			G.score = new_score;
 			G.C_w = C_w;
-			return;
+			return node1;
+		}
+		return node2;
+	}
+	void stepSwapChain(ll n) {
+		short node1 = rand() % G.invariant->V;
+		FOR (i, n) {
+			node1 = stepSwap(node1);
 		}
 	}
 };
@@ -175,8 +184,8 @@ struct OptimizedBlacksmithController {
 			agent.T = T_start;
 			while (agent.T > T_end) {
 				if (agent.G.lock_distribution) {
-					FOR (j, 500) {
-						agent.stepSwap();
+					FOR (j, 100) {
+						agent.stepSwapChain(5);
 					}
 				} else {
 					ll singles = rand() % 500;
@@ -196,7 +205,7 @@ struct OptimizedBlacksmithController {
 	void step_and_prune() {
 		step();
 		sort(all(population), [](OptimizedAnnealingAgent &a, OptimizedAnnealingAgent &b) {
-			return a.G.score < b.G.score;
+			return a.G.lock_distribution > b.G.lock_distribution || (a.G.lock_distribution == b.G.lock_distribution && a.G.score < b.G.score);
 		});
 		ll half = sz(population) / 2;
 		FOB (i, half, sz(population)) {
@@ -263,6 +272,8 @@ pair<OptimizedGraph, bool> optimize(
 							delta = true;
 						}
 						agent.G.lock_distribution = true;
+					} else {
+						agent.G.lock_distribution = false;
 					}
 				}
 			}
@@ -300,12 +311,12 @@ pair<OptimizedGraph, bool> optimize(
 void final_solve(Result &result, ld target_score) {
 	vector<OptimizedGraph> Gs, Gs_;
 	OptimizedGraph G;
-	optimized_read_graph(G, result.size, result.id, "midas");
-	Gs = optimized_read_local_graphs(G, result.size, result.id, "midas");
+	optimized_read_graph(G, result.size, result.id, "rocky");
+	Gs = optimized_read_local_graphs(G, result.size, result.id, "rocky");
 	map<ll, ll> team_sizes;
 	ll elite = min((ll) sz(Gs), 128ll), idx = 0, int_deltas = 0;
 	set<ll> int_delta_team_sizes;	
-	while (idx < elite) {
+	while (idx < elite && sz(team_sizes) < 5) {
 		team_sizes[Gs[idx].invariant->T]++;
 		if (Gs[idx].score - target_score == round(Gs[idx].score - target_score)) {
 			Gs[idx].lock_distribution = true;
