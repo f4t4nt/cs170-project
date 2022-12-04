@@ -142,6 +142,7 @@ struct OptimizedGraph {
 	vector<ch> node_teams;
 	vector<short> team_sizes;
 	bool lock_distribution = false;
+	bool unchanged = false;
 };
 
 struct Result {
