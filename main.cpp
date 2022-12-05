@@ -114,6 +114,7 @@ struct OptimizedAnnealingAgent {
 
 		return false;
 	}
+
 	short stepSwap(size_t retries, short node1 = -1) {
 		size_t i = retries;
 		while(i--) {
@@ -132,7 +133,7 @@ struct OptimizedAnnealingAgent {
 				swap(G.node_teams[node1], G.node_teams[node2]);
 				G.score = new_score;
 				G.C_w = C_w;
-				return node1;
+				return node2;
 			}
 
 			ld p = exp((G.score - new_score) / T);
@@ -140,7 +141,7 @@ struct OptimizedAnnealingAgent {
 				swap(G.node_teams[node1], G.node_teams[node2]);
 				G.score = new_score;
 				G.C_w = C_w;
-				return node1;
+				return node2;
 			}
 		}
 
@@ -346,14 +347,7 @@ pair<OptimizedGraph, bool> optimize(
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
 	OptimizedBlacksmithController smith;
-	smith.init(G, team_count, population_size, 1, 0.9, Gs);
-
-	// FOR (i, idle_steps) {
-	// 	smith.step();
-	// }
-
-	smith.T_start = T_start0;
-	smith.T_end = T_end0;
+	smith.init(G, team_count, population_size, T_start0, T_end0, Gs);
 	smith.prune();
 	ll batch_steps = (idle_steps + 1) * 5;
 	bool reset_temp = false;
@@ -393,7 +387,8 @@ pair<OptimizedGraph, bool> optimize(
 		if (i % batch_steps == 0) {
 			optimized_write_output(G);
 			auto comparision_score = smith.population[comparision_index - 1].G.score;
-			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << " | " << comparision_score << " ) and worst score " << smith.population[population_size / 2 - 1].G.score << ", temperature " << smith.T_start << ", unchanged " << smith.unchanged << endl;
+			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << " | " << comparision_score << "), temperature " << smith.T_start << ", unchanged " << smith.unchanged << endl;
+
 			if (search_deltas) {
 				bool found_delta = false;
 				FOR (j, population_size) {
@@ -464,7 +459,7 @@ pair<OptimizedGraph, bool> optimize(
 	return {G, delta};
 }
 
-void basic_solve(Result &result, ld target_score) {
+void basic_solve(Result &result, ld target_score, ch team_count = -1, ch min_team_count = 2) {
 	OptimizedGraph G;
 	char *compute_name = getenv("HOSTNAME");
 	if (!compute_name) {
@@ -483,10 +478,15 @@ void basic_solve(Result &result, ld target_score) {
 	cout << "Basic solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
 	cout << "Target score " << target_score << endl << endl;
 
-	ch team_count = max_teams(result.best_score);
+	if (team_count == -1) {
+		team_count = max_teams(target_score);
+	} elif (team_count < 2) {
+		optimized_read_best_graph(G, result.size, result.id, comp_name);
+		team_count += G.invariant->T;
+	}
 	ld prev_score = INF;
 
-	while (team_count >= 2 && G.score < prev_score) {
+	while (team_count >= min_team_count && G.score < prev_score) {
 		cout << "Team size " << team_count - 0 << endl;
 		init_teams(G, team_count);
 		prev_score = G.score;
@@ -645,6 +645,7 @@ int main() {
 		vector<Result> results = read_queue();
 		FORE (result, results) {
 			basic_solve(result, result.best_score);
+			// final_solve(result, result.best_score);
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;

@@ -1,7 +1,6 @@
 import os
 from starter import *
 
-# hidden = ['insurance', 'wrath_of_god', 'sick0', 'sick1', 'sick2']
 hidden = []
 used = set()
 
