@@ -76,7 +76,7 @@ struct OptimizedAnnealingAgent {
 		T = T0;
 	}
 
-	bool stepSingle(int retries = 10) {
+	bool stepSingle(int retries = 10, ld start_score = -1) {
 		int i = retries;
 		while(i--) {
 			short node = rand() % G.invariant->V;
@@ -88,7 +88,8 @@ struct OptimizedAnnealingAgent {
 			ld C_w, B, B_norm_squared, B_old, B_new;
 			tie(C_w, B, B_norm_squared, B_old, B_new) = optimized_update_score(G, node, old_team, new_team);
 			ld new_score = C_w + G.K + B;
-			if (new_score < G.score) {
+			start_score = start_score < 0 ? G.score : start_score;
+			if (new_score < start_score) {
 				G.node_teams[node] = new_team;
 				G.team_sizes[old_team]--;
 				G.team_sizes[new_team]++;
@@ -99,7 +100,7 @@ struct OptimizedAnnealingAgent {
 				G.B_norm_squared = B_norm_squared;
 				return true;
 			}
-			ld p = exp((G.score - new_score) / T);
+			ld p = exp((start_score - new_score) / T);
 			if (rand() < p * 32767) {
 				G.node_teams[node] = new_team;
 				G.team_sizes[old_team]--;
@@ -116,7 +117,7 @@ struct OptimizedAnnealingAgent {
 		return false;
 	}
 
-	short stepSwap(size_t retries, short node1 = -1) {
+	short stepSwap(size_t retries, short node1 = -1, ld start_score = -1) {
 		size_t i = retries;
 		while(i--) {
 			if (node1 == -1) {
@@ -130,14 +131,15 @@ struct OptimizedAnnealingAgent {
 
 			ld C_w = optimized_update_swap_score(G, node1, node2);
 			ld new_score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
-			if (new_score < G.score) {
+			start_score = start_score < 0 ? G.score : start_score;
+			if (new_score < start_score) {
 				swap(G.node_teams[node1], G.node_teams[node2]);
 				G.score = new_score;
 				G.C_w = C_w;
 				return node2;
 			}
 
-			ld p = exp((G.score - new_score) / T);
+			ld p = exp((start_score - new_score) / T);
 			if (rand() < p * 32767) {
 				swap(G.node_teams[node1], G.node_teams[node2]);
 				G.score = new_score;
@@ -149,11 +151,11 @@ struct OptimizedAnnealingAgent {
 		return node1;
 	}
 
-	bool stepSwapChain(ll n, size_t swap_retries = 5) {
+	bool stepSwapChain(ll n, size_t swap_retries = 5, ld start_score = -1) {
 		bool changed = false;
 		short node1 = rand() % G.invariant->V;
 		FOR (i, n) {
-			auto tmp = stepSwap(swap_retries, node1);
+			auto tmp = stepSwap(swap_retries, node1, start_score);
 			if (node1 != tmp) {
 				return changed;
 			} else {
@@ -223,10 +225,10 @@ struct OptimizedBlacksmithController {
 			auto &agent = population[i];
 			auto start_score = agent.G.score;
 
-			const size_t ld_limit = 100, non_ld_limit = 50,
-				ld_fast_limit = 20, non_ld_fast_limit = 10,
-				swap_limit = 10, move_limit = 10, fast_swap_limit = 5, fast_move_limit = 5;
-			int retries = agent.G.lock_distribution ? 10 : 50;
+			const size_t ld_limit = 100, non_ld_limit = 500,
+				ld_fast_limit = 10, non_ld_fast_limit = 100,
+				swap_limit = 10, move_limit = 10, fast_swap_limit = 3, fast_move_limit = 3;
+			int retries = agent.G.lock_distribution ? 1 : 1;
 			while(retries--) {
 				agent.T = T_start;
 				while (agent.T > T_end) {
@@ -234,7 +236,7 @@ struct OptimizedBlacksmithController {
 					if (agent.G.lock_distribution) {
 						size_t parts = start_score == agent.G.score ? ld_limit : ld_fast_limit;
 						FOR (j, parts) {
-							agent.stepSwapChain(sl, swap_limit);
+							agent.stepSwapChain(sl, swap_limit, start_score);
 						}
 					} else {
 						size_t parts = start_score == agent.G.score ? non_ld_limit : non_ld_fast_limit;
@@ -245,7 +247,7 @@ struct OptimizedBlacksmithController {
 						}
 
 						FOB (j, singles, parts) {
-							agent.stepSwap(sl);
+							agent.stepSwap(sl, -1, start_score);
 						}
 					}
 
@@ -261,8 +263,8 @@ struct OptimizedBlacksmithController {
 			agent.G.unchanged = agent.G.score == start_score;
 		}
 
-		T_start *= 0.99;
-		T_end *= 0.99;
+		T_start *= 0.995;
+		T_end *= 0.995;
 	}
 
 	int unchanged = 0;
@@ -281,7 +283,7 @@ struct OptimizedBlacksmithController {
 		sort(all(population), [](OptimizedAnnealingAgent &a, OptimizedAnnealingAgent &b) {
 			// if (a.G.lock_distribution == b.G.lock_distribution) {
 				return a.G.score < b.G.score;
-			// } else if (abs(a.G.score - b.G.score) < a.G.score * 0.002) {
+			// } else if (abs(a.G.score - b.G.score) < a.G.score * 0.2) {
 			// 	return a.G.lock_distribution > b.G.lock_distribution;
 			// } else {
 			// 	return a.G.score < b.G.score;
@@ -304,10 +306,11 @@ struct OptimizedBlacksmithController {
 			ll rand_high = rand() << 15 + rand() + 100;
 			population[i] = population[half - ((size_t)floor(sqrt(rand_high)) - 10) % half - 1];
 
-			if (T_start < 10 && !population[i].G.lock_distribution && rand() % 100 < 1) {
+			if (T_start < 10 && !population[i].G.lock_distribution && rand() % 100 < 25) {
 				ll other;
 				do {
-					other = rand() % half;
+					ll rand_high = rand() << 15 + rand() + 100;
+					other = half - ((size_t)floor(sqrt(rand_high)) - 10) % half - 1;
 				} while (population[other].G.invariant->T != population[i].G.invariant->T);
 
 				if (other != i) {
@@ -356,6 +359,7 @@ pair<OptimizedGraph, bool> optimize(
 	auto comparision_index = sz(smith.population) / preserve_population_frac;
 	ld previous_comparision_score = 1e+21;
 
+	smith.start_mixup = comparision_index / 4;
 	FOR (i, generations) {
 		smith.step_and_prune(search_deltas ? target_score : 0);
 		auto population_best = smith.population[0].G;
@@ -405,7 +409,9 @@ pair<OptimizedGraph, bool> optimize(
 				}
 			}
 
-			if (std::round(previous_comparision_score * 100) <= std::round(comparision_score * 100) || smith.T_start < 1e-2) {
+			if (std::round(previous_comparision_score * 10) <= std::round(comparision_score * 10)
+				|| (smith.unchanged > 150 && i > 100 && smith.T_start < 20)
+				|| smith.T_start < 1e-2) {
 				stagnation++;
 				if (stagnation >= stagnation_limit) {
 					cout << "Stagnation limit reached, terminating" << endl;
@@ -474,7 +480,7 @@ void basic_solve(Result &result, ld target_score, ch team_count = -1, ch min_tea
 	short population_sz = 1024;
 	ld T_start = 1000, T_end = 900, ignition_factor = 200;
 	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
-	bool search_deltas = false;
+	bool search_deltas = true;
 
 	cout << "Basic solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
 	cout << "Target score " << target_score << endl << endl;
