@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+size_t preserve_population_frac = 4;
 OptimizedGraph optimized_coloring_threshold(OptimizedGraph G) {
 	G.score = INF;
 	FOR (threshold, 10) {
@@ -73,8 +74,9 @@ struct OptimizedAnnealingAgent {
 		G = G_in;
 		T = T0;
 	}
-	void stepSingle() {
-		int i = 10;
+
+	bool stepSingle(int retries = 10) {
+		int i = retries;
 		while(i--) {
 			short node = rand() % G.invariant->V;
 			ch old_team = G.node_teams[node];
@@ -94,7 +96,7 @@ struct OptimizedAnnealingAgent {
 				G.score = new_score;
 				G.C_w = C_w;
 				G.B_norm_squared = B_norm_squared;
-				return;
+				return true;
 			}
 			ld p = exp((G.score - new_score) / T);
 			if (rand() < p * 32767) {
@@ -106,53 +108,81 @@ struct OptimizedAnnealingAgent {
 				G.score = new_score;
 				G.C_w = C_w;
 				G.B_norm_squared = B_norm_squared;
-				return;
+				return true;
 			}
 		}
+
+		return false;
 	}
-	short stepSwap(short node1 = -1) {
-		if (node1 == -1) {
-			node1 = rand() % G.invariant->V;
-		}
-		short node2 = rand() % G.invariant->V;
-		while (node1 == node2 || G.node_teams[node1] == G.node_teams[node2]) {
-			node2 = rand() % G.invariant->V;
+
+	short stepSwap(size_t retries, short node1 = -1) {
+		size_t i = retries;
+		while(i--) {
+			if (node1 == -1) {
+				node1 = rand() % G.invariant->V;
+			}
+
+			short node2 = rand() % G.invariant->V;
+			while (node1 == node2 || G.node_teams[node1] == G.node_teams[node2]) {
+				node2 = rand() % G.invariant->V;
+			}
+
+			ld C_w = optimized_update_swap_score(G, node1, node2);
+			ld new_score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
+			if (new_score < G.score) {
+				swap(G.node_teams[node1], G.node_teams[node2]);
+				G.score = new_score;
+				G.C_w = C_w;
+				return node2;
+			}
+
+			ld p = exp((G.score - new_score) / T);
+			if (rand() < p * 32767) {
+				swap(G.node_teams[node1], G.node_teams[node2]);
+				G.score = new_score;
+				G.C_w = C_w;
+				return node2;
+			}
 		}
 
-		ld C_w = optimized_update_swap_score(G, node1, node2);
-		ld new_score = C_w + G.K + exp(B_EXP * sqrt(G.B_norm_squared));
-		if (new_score < G.score) {
-			swap(G.node_teams[node1], G.node_teams[node2]);
-			G.score = new_score;
-			G.C_w = C_w;
-			return node1;
-		}
-		ld p = exp((G.score - new_score) / T);
-		if (rand() < p * 32767) {
-			swap(G.node_teams[node1], G.node_teams[node2]);
-			G.score = new_score;
-			G.C_w = C_w;
-			return node1;
-		}
-		return node2;
+		return node1;
 	}
-	void stepSwapChain(ll n) {
+
+	bool stepSwapChain(ll n, size_t swap_retries = 5) {
+		bool changed = false;
 		short node1 = rand() % G.invariant->V;
 		FOR (i, n) {
-			node1 = stepSwap(node1);
+			auto tmp = stepSwap(swap_retries, node1);
+			if (node1 != tmp) {
+				return changed;
+			} else {
+				changed = true;
+			}
 		}
+
+		return changed;
 	}
 };
 
 struct OptimizedBlacksmithController {
 	vector<OptimizedAnnealingAgent> population;
 	ld T_start, T_end;
-	void init(OptimizedGraph &G_in, ll team_count, ll population_size, ld T_start0, ld T_end0, vector<OptimizedGraph> Gs = {}, bool preserve_dist = false) {
+	size_t start_mixup = 0;
+	void init(
+		OptimizedGraph &G_in,
+		ll team_count,
+		ll population_size,
+		ld T_start0,
+		ld T_end0,
+		vector<OptimizedGraph> Gs = {},
+		bool preserve_dist = false
+	) {
 		population = vector<OptimizedAnnealingAgent>(population_size);
 		T_start = T_start0;
 		T_end = T_end0;
+
 		if (sz(Gs) == 0) {
-			if (preserve_dist) {
+			if (!preserve_dist) {
 				FOR (i, population_size) {
 					if (population[i].G.lock_distribution) {
 						FOR (_, 10000) {
@@ -183,55 +213,118 @@ struct OptimizedBlacksmithController {
 			}
 		}
 	}
+
 	void step() {
 		auto population_size = sz(population);
+
 		#pragma omp parallel for
-		for (size_t i = 0; i < population_size; i++) {
+		for (size_t i = start_mixup; i < population_size; i++) {
 			auto &agent = population[i];
-			agent.T = T_start;
-			while (agent.T > T_end) {
-				if (agent.G.lock_distribution) {
-					FOR (j, 100) {
-						agent.stepSwapChain(5);
+			auto start_score = agent.G.score;
+
+			const size_t ld_limit = 100, non_ld_limit = 50,
+				ld_fast_limit = 20, non_ld_fast_limit = 10,
+				swap_limit = 10, move_limit = 10, fast_swap_limit = 5, fast_move_limit = 5;
+			int retries = agent.G.lock_distribution ? 10 : 50;
+			while(retries--) {
+				agent.T = T_start;
+				while (agent.T > T_end) {
+					size_t sl = start_score == agent.G.score ? swap_limit : fast_swap_limit;
+					if (agent.G.lock_distribution) {
+						size_t parts = start_score == agent.G.score ? ld_limit : ld_fast_limit;
+						FOR (j, parts) {
+							agent.stepSwapChain(sl, swap_limit);
+						}
+					} else {
+						size_t parts = start_score == agent.G.score ? non_ld_limit : non_ld_fast_limit;
+						size_t ml = start_score == agent.G.score ? move_limit : fast_move_limit;
+						size_t singles = rand() % parts;
+						FOR (j, singles) {
+							agent.stepSingle(ml);
+						}
+
+						FOB (j, singles, parts) {
+							agent.stepSwap(sl);
+						}
 					}
-				} else {
-					ll singles = rand() % 500;
-					FOR (j, singles) {
-						agent.stepSingle();
-					}
-					FOB (j, singles, 500) {
-						agent.stepSwap();
-					}
+
+					agent.T *= 0.99;
 				}
 
-				agent.T *= 0.99;
+				ld p = exp((start_score - agent.G.score) / (T_start / 2));
+				if ((agent.G.score < start_score || rand() < p * 32767) && start_score != agent.G.score) {
+					break;
+				}
 			}
+
+			agent.G.unchanged = agent.G.score == start_score;
 		}
 
 		T_start *= 0.99;
 		T_end *= 0.99;
 	}
-	void step_and_prune() {
-		step();
-		sort(all(population), [](OptimizedAnnealingAgent &a, OptimizedAnnealingAgent &b) {
-			if (a.G.lock_distribution == b.G.lock_distribution) {
-				return a.G.score < b.G.score;
-			} else if (abs(a.G.score - b.G.score) < a.G.score * 0.1) {
-				return a.G.lock_distribution > b.G.lock_distribution;
-			} else {
-				return a.G.score < b.G.score;
+
+	int unchanged = 0;
+	void prune(ld target_score = 0) {
+		unchanged = 0;
+		FOR(i, sz(population)) {
+			auto &agent = population[i];
+			if (agent.G.unchanged) {
+				unchanged++;
 			}
+
+			agent.G.lock_distribution = target_score > 0
+				&& round(agent.G.score - target_score) == agent.G.score - target_score;
+		}
+
+		sort(all(population), [](OptimizedAnnealingAgent &a, OptimizedAnnealingAgent &b) {
+			// if (a.G.lock_distribution == b.G.lock_distribution) {
+				return a.G.score < b.G.score;
+			// } else if (abs(a.G.score - b.G.score) < a.G.score * 0.002) {
+			// 	return a.G.lock_distribution > b.G.lock_distribution;
+			// } else {
+			// 	return a.G.score < b.G.score;
+			// }
 		});
 
-		ll half = sz(population) / 4;
-		FOB (i, half, sz(population)) {
-			population[i] = population[rand() % half];
-			ll other;
-			do {
-				other = rand() % half;
-			} while (other == i);
-			optimized_cross(population[i].G, population[rand() % half].G);
+		ll half = sz(population) / preserve_population_frac;
+
+		for(size_t i = 0, j = 1; i < half - 1 && j < sz(population); ++j) {
+			if (population[i].G.score != population[j].G.score) {
+				population[++i] = population[j];
+			}
 		}
+
+		sort(population.begin(), population.begin() + half, [](OptimizedAnnealingAgent &a, OptimizedAnnealingAgent &b) {
+			return a.G.score < b.G.score;
+		});
+
+		for (size_t i = half; i < sz(population); i++) {
+			ll rand_high = rand() << 15 + rand() + 100;
+			population[i] = population[half - ((size_t)floor(sqrt(rand_high)) - 10) % half - 1];
+
+			if (T_start < 10 && !population[i].G.lock_distribution && rand() % 100 < 1) {
+				ll other;
+				do {
+					other = rand() % half;
+				} while (population[other].G.invariant->T != population[i].G.invariant->T);
+
+				if (other != i) {
+					optimized_cross(population[i].G, population[rand() % half].G);
+				}
+			}
+		}
+
+		FOR(i, sz(population)) {
+			auto &agent = population[i];
+			agent.G.lock_distribution = target_score > 0
+				&& round(agent.G.score - target_score) == agent.G.score - target_score;
+		}
+	}
+
+	void step_and_prune(ld target_score = 0) {
+		step();
+		prune(target_score);
 	}
 };
 
@@ -254,18 +347,16 @@ pair<OptimizedGraph, bool> optimize(
 	ll stagnation = 0;
 	ld best_score = 1e18, previous_score = 1e18;
 	OptimizedBlacksmithController smith;
-	smith.init(G, team_count, population_size, 1, 0.9, Gs);
-	FOR (i, idle_steps) {
-		smith.step();
-	}
-	smith.step_and_prune();
-	smith.T_start = T_start0;
-	smith.T_end = T_end0;
+	smith.init(G, team_count, population_size, T_start0, T_end0, Gs);
+	smith.prune();
 	ll batch_steps = (idle_steps + 1) * 5;
 	bool reset_temp = false;
 
+	auto comparision_index = sz(smith.population) / preserve_population_frac;
+	ld previous_comparision_score = 1e+21;
+
 	FOR (i, generations) {
-		smith.step_and_prune();
+		smith.step_and_prune(search_deltas ? target_score : 0);
 		auto population_best = smith.population[0].G;
 		if (population_best.score < best_score) {
 			best_score = population_best.score;
@@ -295,62 +386,120 @@ pair<OptimizedGraph, bool> optimize(
 
 		if (i % batch_steps == 0) {
 			optimized_write_output(G);
-			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << ") and worst score " << smith.population[population_size / 4 - 1].G.score << ", temperature " << smith.T_start << endl;
+			auto comparision_score = smith.population[comparision_index - 1].G.score;
+			cout << "Generation " << i << " best score (" << G.score << " | " << best_score << " | " << comparision_score << "), temperature " << smith.T_start << ", unchanged " << smith.unchanged << endl;
+
 			if (search_deltas) {
 				bool found_delta = false;
 				FOR (j, population_size) {
 					auto &agent = smith.population[j];
-					if (target_score > 0 && round(agent.G.score - target_score) == agent.G.score - target_score) {
+					if (agent.G.lock_distribution) {
 						if (!found_delta) {
 							optimized_write_output(agent.G, true);
 							cout << "Found delta " << agent.G.score - target_score << endl;
 							found_delta = true;
 							delta = true;
 						}
-						agent.G.lock_distribution = search_deltas;
 					}
 				}
 			}
-			if (previous_score == best_score || smith.T_start < 1e-2) {
+
+			if (std::round(previous_comparision_score * 100) <= std::round(comparision_score * 100) || smith.T_start < 1e-2) {
 				stagnation++;
 				if (stagnation >= stagnation_limit) {
 					cout << "Stagnation limit reached, terminating" << endl;
 					break;
 				}
+
 				cout << "Stagnation " << stagnation << ", firing up forge" << endl;
-				if (smith.T_start < T_start0 / ignition_factor) {
+				if (smith.T_start < T_start0 / ignition_factor || (delta && !reset_temp)) {
 					smith.T_start *= ignition_factor;
 					smith.T_end *= ignition_factor;
+					if (delta && !reset_temp) {
+						reset_temp = true;
+						stagnation_limit += 1;
+					}
+
+					smith.start_mixup = comparision_index;
 					cout << "Temperature set to " << smith.T_start << endl;
 				} else {
-					smith.init(G, team_count, population_size, T_start0, T_end0);
+					// smith.init(G, team_count, population_size, T_start0, T_end0);
 					cout << "Ionizing" << endl;
+					smith.start_mixup = comparision_index;
+					smith.T_start *= ignition_factor;
+					smith.T_end *= ignition_factor;
 				}
 
-				if (delta && !reset_temp) {
-					reset_temp = true;
-					smith.T_start *= 10;
-					smith.T_end *= 10;
-				}
+				smith.T_start = min(smith.T_start, T_start0 * 2);
+				smith.T_end = min(smith.T_end, T_end0 * 2);
 
 				if (!delta && (best_score - target_score) > target_score * 0.2) {
 					break;
 				}
 
 				best_score = 1e18;
+				comparision_score = 1e21;
+			} else {
 			}
+
 			if (G.score <= target_score && extended) {
 				stagnation_limit++;
 				extended = false;
 			}
+
+			previous_comparision_score = comparision_score;
 			previous_score = best_score;
 		}
+
 		FOR (j, idle_steps) {
 			smith.step();
 		}
 		i += idle_steps;
 	}
 	return {G, delta};
+}
+
+void basic_solve(Result &result, ld target_score, ch team_count = -1, ch min_team_count = 2) {
+	OptimizedGraph G;
+	char *compute_name = getenv("HOSTNAME");
+	if (!compute_name) {
+		compute_name = getenv("COMPUTERNAME");
+	}
+	G.score = 1e18;
+
+	string comp_name = string(compute_name);
+	optimized_read_graph(G, result.size, result.id, comp_name);
+
+	short population_sz = 1024;
+	ld T_start = 1000, T_end = 900, ignition_factor = 200;
+	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
+	bool search_deltas = false;
+
+	cout << "Basic solving " << result.size << result.id << " with population size " << population_sz << endl << endl;
+	cout << "Target score " << target_score << endl << endl;
+
+	if (team_count == -1) {
+		team_count = max_teams(target_score);
+	} elif (team_count < 2) {
+		optimized_read_best_graph(G, result.size, result.id, comp_name);
+		team_count += G.invariant->T;
+	}
+	ld prev_score = INF;
+
+	while (team_count >= min_team_count && G.score < prev_score) {
+		cout << "Team size " << team_count - 0 << endl;
+		init_teams(G, team_count);
+		prev_score = G.score;
+		tie(G, ignore) = optimize(G, team_count, population_sz, generations, idle_steps, T_start, T_end, target_score, stagnation_limit, ignition_factor, search_deltas);
+		optimized_write_output(G);
+		if (G.score <= target_score + 1e-9) {
+			cout << "Target score reached" << endl;
+		} elif (G.score < result.local_score) {
+			cout << "Local score beat" << endl;
+		}
+		cout << endl;
+		team_count--;
+	}
 }
 
 void final_solve(Result &result, ld target_score) {
@@ -495,7 +644,8 @@ int main() {
 		srand(time(NULL));
 		vector<Result> results = read_queue();
 		FORE (result, results) {
-			final_solve(result, result.best_score);
+			basic_solve(result, result.best_score);
+			// final_solve(result, result.best_score);
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
