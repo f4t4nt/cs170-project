@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-size_t preserve_population_frac = 4;
+size_t preserve_population_frac = 8;
+
 OptimizedGraph optimized_coloring_threshold(OptimizedGraph G) {
 	G.score = INF;
 	FOR (threshold, 10) {
@@ -558,7 +559,7 @@ void final_solve(Result &result, ld target_score) {
 	}
 
 	Gs = Gs_;
-	short population_sz = 1024;
+	short population_sz = 2048;
 	ld T_start = 100, T_end = 95, ignition_factor = 200;
 	ll idle_steps = 19, generations = 1000000, stagnation_limit = 2;
 	bool search_deltas = true;
@@ -644,8 +645,8 @@ int main() {
 		srand(time(NULL));
 		vector<Result> results = read_queue();
 		FORE (result, results) {
-			basic_solve(result, result.best_score);
-			// final_solve(result, result.best_score);
+			// basic_solve(result, result.best_score);
+			final_solve(result, result.best_score);
 			auto end = chrono::high_resolution_clock::now();
 			auto duration = chrono::duration_cast<chrono::seconds>(end - start);
 			cout << "Time elapsed: " << duration.count() << " seconds" << endl << endl;
